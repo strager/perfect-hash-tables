@@ -74,13 +74,21 @@ perfect_hash_table make_perfect_hash_table(table_strategy strategy) {
     }
 
     table.hash_basis = 0x811c9dc5; // FNV-1a 32-bit basis.
+    int attempts = 0;
     for (;;) {
+        attempts += 1;
         bool succeeded = try_add_all_entries(table);
         if (succeeded) {
             break;
         }
         table.hash_basis += 1;
     }
+    std::fprintf(
+        stderr,
+        "took %d attempts to generate table of size %lu from %zu items\n",
+        attempts,
+        table.table_size,
+        std::size(keyword_tokens));
 
     return table;
 }
