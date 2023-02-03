@@ -6,6 +6,7 @@
 #include "lex.h"
 #include "token.h"
 #include <benchmark/benchmark.h>
+#include <cstring>
 #include <string>
 #include <vector>
 
@@ -20,7 +21,15 @@ void benchmark_look_up_identifier(::benchmark::State& state, implementation impl
 }
 
 std::string benchmark_name(const char* test_case, implementation impl) {
-    return std::string(test_case) + "/" + impl.name;
+    std::string_view impl_name = impl.name;
+    auto slash = impl_name.rfind('/');
+    if (slash != std::string_view::npos) {
+        impl_name = impl_name.substr(slash + 1);
+    }
+    if (impl_name.starts_with("lib")) impl_name.remove_prefix(3);
+    if (impl_name.ends_with(".so")) impl_name.remove_suffix(3);
+    if (impl_name.ends_with("-generated")) impl_name.remove_suffix(std::strlen("-generated"));
+    return test_case + ("/" + std::string(impl_name));
 }
 }
 }
