@@ -77,6 +77,15 @@ perfect_hash_table make_perfect_hash_table(table_strategy strategy) {
     int attempts = 0;
     for (;;) {
         attempts += 1;
+        if (attempts >= 1'000'000) {
+            std::fprintf(
+                stderr,
+                "can't generate table of size %lu from %zu items after %d attempts\n",
+                table.table_size,
+                std::size(keyword_tokens),
+                attempts);
+            std::exit(1);
+        }
         bool succeeded = try_add_all_entries(table);
         if (succeeded) {
             break;
