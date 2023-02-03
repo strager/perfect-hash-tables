@@ -34,6 +34,6 @@ libtoken-gperf-$(flags)-generated.so: token-gperf-$(flags)-generated.cpp token.h
 	$$(CXX) $$(extra_CXXFLAGS) $$(CXXFLAGS) $$(extra_test_LDFLAGS) $$(LDFLAGS) -shared -o $$(@) $$(<)
 
 token-gperf-$(flags)-generated.cpp: token.gperf Makefile
-	gperf $(flags:,= ) $$(<) >$$(@)
+	gperf $(flags:,= ) $$(<) | sed -e '/^#line/d' >$$(@)
 endef
 $(foreach flags,$(gperf_combinations),$(eval $(call make_gperf_so)))
