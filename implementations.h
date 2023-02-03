@@ -8,7 +8,7 @@
 
 namespace pht {
 constexpr const char* implementation_so_paths[] = {
-#include "implementations-generated.inc"
+#include "generated/implementations-generated.inc"
 };
 }
 
