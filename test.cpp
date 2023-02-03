@@ -1,6 +1,7 @@
 // Copyright (C) 2020  Matthew "strager" Glazar
 // See end of file for extended copyright information.
 
+#include "implementations.h"
 #include "token.h"
 #include <cstdio>
 #include <cstdlib>
@@ -148,7 +149,9 @@ void test_so(const char* so_path) {
 }
 
 int main() {
-    pht::test_so("./libtoken-gperf-generated.so");
+    for (const char* so_path : pht::implementation_so_paths) {
+        pht::test_so(so_path);
+    }
     return 0;
 }
 
