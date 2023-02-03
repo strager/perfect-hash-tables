@@ -54,6 +54,24 @@ bool try_add_all_entries(perfect_hash_table& table) {
     return true;
 }
 
+// Returns the number of attempts. If it's >= max_attempts, then building the
+// table failed.
+int try_build_table(perfect_hash_table& table, int max_attempts) {
+    table.hash_basis = 0x811c9dc5; // FNV-1a 32-bit basis.
+    int attempts = 0;
+    for (;;) {
+        attempts += 1;
+        if (attempts >= max_attempts) {
+            return attempts;
+        }
+        bool succeeded = try_add_all_entries(table);
+        if (succeeded) {
+            return attempts;
+        }
+        table.hash_basis += 1;
+    }
+}
+
 perfect_hash_table make_perfect_hash_table(table_strategy strategy) {
     perfect_hash_table table;
     switch (strategy.size_strategy) {
@@ -73,24 +91,17 @@ perfect_hash_table make_perfect_hash_table(table_strategy strategy) {
         table.max_keyword_size = std::max(table.max_keyword_size, size);
     }
 
-    table.hash_basis = 0x811c9dc5; // FNV-1a 32-bit basis.
-    int attempts = 0;
-    for (;;) {
-        attempts += 1;
-        if (attempts >= 1'000'000) {
-            std::fprintf(
-                stderr,
-                "can't generate table of size %lu from %zu items after %d attempts\n",
-                table.table_size,
-                std::size(keyword_tokens),
-                attempts);
-            std::exit(1);
-        }
-        bool succeeded = try_add_all_entries(table);
-        if (succeeded) {
-            break;
-        }
-        table.hash_basis += 1;
+
+    int max_attempts = 1'000'000;
+    int attempts = try_build_table(table, max_attempts);
+    if (attempts >= max_attempts) {
+        std::fprintf(
+            stderr,
+            "can't generate table of size %lu from %zu items after %d attempts\n",
+            table.table_size,
+            std::size(keyword_tokens),
+            attempts);
+        std::exit(1);
     }
     std::fprintf(
         stderr,
