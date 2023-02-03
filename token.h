@@ -94,7 +94,9 @@ enum class token_type : std::uint8_t {
 
 typedef token_type look_up_identifier_f(const char* identifier, std::size_t size) noexcept;
 
-extern "C" look_up_identifier_f look_up_identifier;
+extern "C" 
+__attribute__((visibility("default")))
+look_up_identifier_f look_up_identifier;
 }
 
 #endif
