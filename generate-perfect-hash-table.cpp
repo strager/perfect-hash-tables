@@ -85,7 +85,13 @@ perfect_hash_table make_perfect_hash_table(table_strategy strategy) {
     return table;
 }
 
-void write_table(FILE* file, const perfect_hash_table& table) {
+void write_table(const char* file_path, const perfect_hash_table& table) {
+    FILE* file = std::fopen(file_path, "wb");
+    if (file == nullptr) {
+        std::fprintf(stderr, "error: failed to open %s: %s\n", file_path, std::strerror(errno));
+        std::exit(1);
+    }
+
     std::fprintf(file, R"(
 #include "../perfect-hash-table.h"
 #include "../token.h"
@@ -139,21 +145,14 @@ token_type look_up_identifier(const char* identifier, std::size_t size) noexcept
 }
 }
 )");
+
+    std::fclose(file);
 }
 
 void go() {
-    perfect_hash_table table = make_perfect_hash_table(table_strategy{
+    write_table("generated/perfect-hash-table-generated.cpp", make_perfect_hash_table(table_strategy{
         .size_strategy = table_size_strategy::five_x,
-    });
-
-    const char* file_path = "generated/perfect-hash-table-generated.cpp";
-    FILE* file = std::fopen(file_path, "wb");
-    if (file == nullptr) {
-        std::fprintf(stderr, "error: failed to open %s: %s\n", file_path, std::strerror(errno));
-        std::exit(1);
-    }
-    write_table(file, table);
-    std::fclose(file);
+    }));
 }
 }
 }
