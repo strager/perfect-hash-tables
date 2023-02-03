@@ -37,30 +37,32 @@ clean:
 clean-all: clean
 	rm -rf generated/
 
-build/test: $(gperf_sos) test.cpp token.h implementations.h generated/implementations-generated.inc Makefile build
+build/test: $(gperf_sos) test.cpp token.h implementations.h generated/implementations-generated.inc Makefile build/stamp
 	$(CXX) $(extra_CXXFLAGS) $(CXXFLAGS) $(LDFLAGS) -o $(@) test.cpp
 
-build/benchmark: $(gperf_sos) benchmark.cpp token.h implementations.h generated/implementations-generated.inc Makefile build
+build/benchmark: $(gperf_sos) benchmark.cpp token.h implementations.h generated/implementations-generated.inc Makefile build/stamp
 	$(CXX) -fno-lto $(extra_CXXFLAGS) $(CXXFLAGS) $(LDFLAGS) -o $(@) benchmark.cpp -lbenchmark -lbenchmark_main
 
-generated/implementations-generated.inc: Makefile generated
+generated/implementations-generated.inc: Makefile generated/stamp
 	printf '"./%s",\n' $(gperf_sos) >$(@)
 
 define make_gperf_so
-build/libtoken-gperf-$(flags)-generated.so: generated/token-gperf-$(flags)-generated.cpp token.h Makefile build
+build/libtoken-gperf-$(flags)-generated.so: generated/token-gperf-$(flags)-generated.cpp token.h Makefile build/stamp
 	$$(CXX) -I. $$(extra_CXXFLAGS) $$(CXXFLAGS) $$(extra_test_LDFLAGS) $$(LDFLAGS) $$(extra_gperf_CXXFLAGS) -shared -o $$(@) $$(<)
 
 ifeq ($(findstring --pic,$(flags)), --pic)
 build/libtoken-gperf-$(flags)-generated.so: extra_gperf_CXXFLAGS = -DGPERF_PIC
 endif
 
-generated/token-gperf-$(flags)-generated.cpp: token.gperf Makefile generated
+generated/token-gperf-$(flags)-generated.cpp: token.gperf Makefile generated/stamp
 	set -e -o pipefail ; gperf $(subst _, ,$(flags)) $$(<) | sed -e '/^#line/d' >$$(@)
 endef
 $(foreach flags,$(gperf_combinations),$(eval $(call make_gperf_so)))
 
-build:
+build/stamp:
 	mkdir -p build
+	touch $(@)
 
-generated:
+generated/stamp:
 	mkdir -p generated
+	touch $(@)
