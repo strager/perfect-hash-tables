@@ -26,9 +26,7 @@ std::string benchmark_name(const char* test_case, implementation impl) {
     if (slash != std::string_view::npos) {
         impl_name = impl_name.substr(slash + 1);
     }
-    if (impl_name.starts_with("lib")) impl_name.remove_prefix(3);
     if (impl_name.ends_with(".so")) impl_name.remove_suffix(3);
-    if (impl_name.ends_with("-generated")) impl_name.remove_suffix(std::strlen("-generated"));
     return test_case + ("/" + std::string(impl_name));
 }
 }

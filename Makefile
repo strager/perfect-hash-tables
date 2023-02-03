@@ -15,18 +15,18 @@ gperf_combinations = \
 	--compare-lengths_--readonly-tables \
 	--compare-lengths_--seven-bit \
 
-gperf_sos = $(foreach flags,$(gperf_combinations),build/libtoken-gperf-$(flags)-generated.so)
-gperf_cpps = $(foreach flags,$(gperf_combinations),generated/token-gperf-$(flags)-generated.cpp)
+gperf_sos = $(foreach flags,$(gperf_combinations),build/gperf$(flags).so)
+gperf_cpps = $(foreach flags,$(gperf_combinations),generated/gperf$(flags).cpp)
 
-# Keep in sync with generate-perfect-hash-table.cpp.
+# Keep in sync with generate-pht.cpp.
 pht_combinations = \
 	5x \
 	5xnpot
 
-pht_sos = $(foreach flags,$(pht_combinations),build/libperfect-hash-table-$(flags)-generated.so)
-pht_cpps = $(foreach flags,$(pht_combinations),generated/perfect-hash-table-$(flags)-generated.cpp)
+pht_sos = $(foreach flags,$(pht_combinations),build/pht-$(flags).so)
+pht_cpps = $(foreach flags,$(pht_combinations),generated/pht-$(flags).cpp)
 
-sos = $(gperf_sos) $(pht_sos) build/libtoken-std-unordered-map.so
+sos = $(gperf_sos) $(pht_sos) build/std-unordered-map.so
 
 .PHONY: all
 all: check build/benchmark keywords.txt non-keywords.txt mixed.txt
@@ -47,42 +47,42 @@ clean:
 clean-all: clean
 	rm -rf generated/
 
-build/test: $(sos) test.cpp token.h implementations.h generated/implementations-generated.inc Makefile build/stamp
+build/test: $(sos) test.cpp token.h implementations.h generated/implementations.inc Makefile build/stamp
 	$(CXX) $(extra_CXXFLAGS) $(CXXFLAGS) $(LDFLAGS) -o $(@) test.cpp
 
-build/benchmark: $(sos) benchmark.cpp token.h implementations.h generated/implementations-generated.inc Makefile build/stamp
+build/benchmark: $(sos) benchmark.cpp token.h implementations.h generated/implementations.inc Makefile build/stamp
 	$(CXX) -fno-lto $(extra_CXXFLAGS) $(CXXFLAGS) $(LDFLAGS) -o $(@) benchmark.cpp -lbenchmark
 
-build/map-to-tokens: build/libtoken-gperf-_-generated.so map-to-tokens.cpp file.h lex.h token.h Makefile build/stamp
-	$(CXX) $(extra_CXXFLAGS) $(CXXFLAGS) $(LDFLAGS) -o $(@) map-to-tokens.cpp build/libtoken-gperf-_-generated.so
+build/map-to-tokens: build/gperf_.so map-to-tokens.cpp file.h lex.h token.h Makefile build/stamp
+	$(CXX) $(extra_CXXFLAGS) $(CXXFLAGS) $(LDFLAGS) -o $(@) map-to-tokens.cpp build/gperf_.so
 
-generated/implementations-generated.inc: Makefile generated/stamp
+generated/implementations.inc: Makefile generated/stamp
 	printf '"./%s",\n' $(sos) >$(@)
 
-build/libtoken-std-unordered-map.so: token-std-unordered-map.cpp token.h Makefile build/stamp
+build/std-unordered-map.so: std-unordered-map.cpp token.h Makefile build/stamp
 	$(CXX) $(extra_CXXFLAGS) $(CXXFLAGS) $(extra_test_LDFLAGS) $(LDFLAGS) -shared -o $(@) $(<)
 
-build/generate-perfect-hash-table: generate-perfect-hash-table.cpp token.h perfect-hash-table.h fnv.h Makefile build/stamp
-	$(CXX) $(extra_CXXFLAGS) $(CXXFLAGS) $(LDFLAGS) -o $(@) generate-perfect-hash-table.cpp
+build/generate-pht: generate-pht.cpp token.h pht.h fnv.h Makefile build/stamp
+	$(CXX) $(extra_CXXFLAGS) $(CXXFLAGS) $(LDFLAGS) -o $(@) generate-pht.cpp
 
 define make_pht_so
-build/libperfect-hash-table-$(flags)-generated.so: generated/perfect-hash-table-$(flags)-generated.cpp token.h perfect-hash-table.h fnv.h Makefile build/stamp
+build/pht-$(flags).so: generated/pht-$(flags).cpp token.h pht.h fnv.h Makefile build/stamp
 	$$(CXX) $$(extra_CXXFLAGS) $$(CXXFLAGS) $$(extra_test_LDFLAGS) $$(LDFLAGS) -shared -o $$(@) $$(<)
 endef
 $(foreach flags,$(pht_combinations),$(eval $(call make_pht_so)))
 
-$(pht_cpps): build/generate-perfect-hash-table Makefile generated/stamp
-	./build/generate-perfect-hash-table
+$(pht_cpps): build/generate-pht Makefile generated/stamp
+	./build/generate-pht
 
 define make_gperf_so
-build/libtoken-gperf-$(flags)-generated.so: generated/token-gperf-$(flags)-generated.cpp token.h Makefile build/stamp
+build/gperf$(flags).so: generated/gperf$(flags).cpp token.h Makefile build/stamp
 	$$(CXX) -I. $$(extra_CXXFLAGS) $$(CXXFLAGS) $$(extra_test_LDFLAGS) $$(LDFLAGS) $$(extra_gperf_CXXFLAGS) -shared -o $$(@) $$(<)
 
 ifeq ($(findstring --pic,$(flags)), --pic)
-build/libtoken-gperf-$(flags)-generated.so: extra_gperf_CXXFLAGS = -DGPERF_PIC
+build/gperf$(flags).so: extra_gperf_CXXFLAGS = -DGPERF_PIC
 endif
 
-generated/token-gperf-$(flags)-generated.cpp: token.gperf Makefile generated/stamp
+generated/gperf$(flags).cpp: token.gperf Makefile generated/stamp
 	set -e -o pipefail ; gperf $(subst _, ,$(flags)) $$(<) | sed -e '/^#line/d' >$$(@)
 endef
 $(foreach flags,$(gperf_combinations),$(eval $(call make_gperf_so)))

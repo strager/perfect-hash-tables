@@ -1,7 +1,7 @@
 // Copyright (C) 2020  Matthew "strager" Glazar
 // See end of file for extended copyright information.
 
-#include "perfect-hash-table.h"
+#include "pht.h"
 #include "token.h"
 #include <algorithm>
 #include <bit>
@@ -93,7 +93,7 @@ void write_table(const char* file_path, const perfect_hash_table& table) {
     }
 
     std::fprintf(file, R"(
-#include "../perfect-hash-table.h"
+#include "../pht.h"
 #include "../token.h"
 #include <cstddef>
 #include <cstdint>
@@ -150,10 +150,10 @@ token_type look_up_identifier(const char* identifier, std::size_t size) noexcept
 }
 
 void go() {
-    write_table("generated/perfect-hash-table-5x-generated.cpp", make_perfect_hash_table(table_strategy{
+    write_table("generated/pht-5x.cpp", make_perfect_hash_table(table_strategy{
         .size_strategy = table_size_strategy::five_x,
     }));
-    write_table("generated/perfect-hash-table-5xnpot-generated.cpp", make_perfect_hash_table(table_strategy{
+    write_table("generated/pht-5xnpot.cpp", make_perfect_hash_table(table_strategy{
         .size_strategy = table_size_strategy::five_x_next_power_of_2,
     }));
 }

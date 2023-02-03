@@ -14,7 +14,7 @@
 
 namespace pht {
 constexpr const char* implementation_so_paths[] = {
-#include "generated/implementations-generated.inc"
+#include "generated/implementations.inc"
 };
 
 constexpr std::size_t implementation_count = std::size(implementation_so_paths);
