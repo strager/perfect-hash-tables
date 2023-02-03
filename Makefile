@@ -19,7 +19,11 @@ gperf_sos = $(foreach flags,$(gperf_combinations),build/libtoken-gperf-$(flags)-
 gperf_cpps = $(foreach flags,$(gperf_combinations),generated/token-gperf-$(flags)-generated.cpp)
 
 .PHONY: all
-all: check
+all: check build/benchmark
+
+.PHONY: bench
+bench: build/benchmark
+	./build/benchmark
 
 .PHONY: check
 check: build/test
@@ -35,6 +39,9 @@ clean-all: clean
 
 build/test: $(gperf_sos) test.cpp token.h implementations.h generated/implementations-generated.inc Makefile build
 	$(CXX) $(extra_CXXFLAGS) $(CXXFLAGS) $(LDFLAGS) -o $(@) test.cpp
+
+build/benchmark: $(gperf_sos) benchmark.cpp token.h implementations.h generated/implementations-generated.inc Makefile build
+	$(CXX) -fno-lto $(extra_CXXFLAGS) $(CXXFLAGS) $(LDFLAGS) -o $(@) benchmark.cpp -lbenchmark -lbenchmark_main
 
 generated/implementations-generated.inc: Makefile generated
 	printf '"./%s",\n' $(gperf_sos) >$(@)
