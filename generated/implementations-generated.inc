@@ -8,3 +8,4 @@
 "./build/libtoken-gperf---pic_--seven-bit-generated.so",
 "./build/libtoken-gperf---compare-lengths_--readonly-tables-generated.so",
 "./build/libtoken-gperf---compare-lengths_--seven-bit-generated.so",
+"./build/libtoken-std-unordered-map.so",

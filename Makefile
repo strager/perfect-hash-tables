@@ -1,7 +1,7 @@
 SHELL = bash
 
 extra_test_LDFLAGS = -Wl,--undefined=look_up_identifier
-extra_CXXFLAGS = -std=c++17 -g -O3 -fvisibility=hidden
+extra_CXXFLAGS = -std=c++17 -g -O3 -fvisibility=hidden -fPIC
 
 gperf_combinations = \
 	_ \
@@ -17,6 +17,8 @@ gperf_combinations = \
 
 gperf_sos = $(foreach flags,$(gperf_combinations),build/libtoken-gperf-$(flags)-generated.so)
 gperf_cpps = $(foreach flags,$(gperf_combinations),generated/token-gperf-$(flags)-generated.cpp)
+
+sos = $(gperf_sos) build/libtoken-std-unordered-map.so
 
 .PHONY: all
 all: check build/benchmark keywords.txt non-keywords.txt mixed.txt
@@ -37,17 +39,20 @@ clean:
 clean-all: clean
 	rm -rf generated/
 
-build/test: $(gperf_sos) test.cpp token.h implementations.h generated/implementations-generated.inc Makefile build/stamp
+build/test: $(sos) test.cpp token.h implementations.h generated/implementations-generated.inc Makefile build/stamp
 	$(CXX) $(extra_CXXFLAGS) $(CXXFLAGS) $(LDFLAGS) -o $(@) test.cpp
 
-build/benchmark: $(gperf_sos) benchmark.cpp token.h implementations.h generated/implementations-generated.inc Makefile build/stamp
+build/benchmark: $(sos) benchmark.cpp token.h implementations.h generated/implementations-generated.inc Makefile build/stamp
 	$(CXX) -fno-lto $(extra_CXXFLAGS) $(CXXFLAGS) $(LDFLAGS) -o $(@) benchmark.cpp -lbenchmark -lbenchmark_main
 
 build/map-to-tokens: build/libtoken-gperf-_-generated.so map-to-tokens.cpp file.h lex.h token.h Makefile build/stamp
 	$(CXX) $(extra_CXXFLAGS) $(CXXFLAGS) $(LDFLAGS) -o $(@) map-to-tokens.cpp build/libtoken-gperf-_-generated.so
 
 generated/implementations-generated.inc: Makefile generated/stamp
-	printf '"./%s",\n' $(gperf_sos) >$(@)
+	printf '"./%s",\n' $(sos) >$(@)
+
+build/libtoken-std-unordered-map.so: token-std-unordered-map.cpp token.h Makefile build/stamp
+	$(CXX) $(extra_CXXFLAGS) $(CXXFLAGS) $(extra_test_LDFLAGS) $(LDFLAGS) -shared -o $(@) $(<)
 
 define make_gperf_so
 build/libtoken-gperf-$(flags)-generated.so: generated/token-gperf-$(flags)-generated.cpp token.h Makefile build/stamp
