@@ -2,11 +2,9 @@
 %define class-name lexer_keyword
 %define initializer-suffix ,static_cast<token_type>(0)
 %define lookup-function-name look_up
-%define slot-name string_offset
+%define slot-name string
 %enum
 %language=C++
-%pic
-%readonly-tables
 %struct-type
 
 %{
@@ -21,7 +19,11 @@ namespace pht {
 namespace {
 %}
 struct keyword_entry {
-  int string_offset;
+#if GPERF_PIC
+  int string;
+#else
+  const char* string;
+#endif
   token_type type;
 };
 

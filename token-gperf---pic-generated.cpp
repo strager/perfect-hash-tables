@@ -1,5 +1,5 @@
 /* C++ code produced by gperf version 3.1 */
-/* Command-line: gperf token.gperf  */
+/* Command-line: gperf --pic token.gperf  */
 /* Computed positions: -k'1-2,$' */
 
 #if !((' ' == 32) && ('!' == 33) && ('"' == 34) && ('#' == 35) \
@@ -29,7 +29,6 @@
 #error "gperf generated tables don't work with this execution character set. Please report a bug to <bug-gperf@gnu.org>."
 #endif
 
-#line 12 "token.gperf"
 
 // Copyright (C) 2020  Matthew "strager" Glazar
 // See end of file for extended copyright information.
@@ -40,9 +39,12 @@
 
 namespace pht {
 namespace {
-#line 23 "token.gperf"
 struct keyword_entry {
-  int string_offset;
+#if GPERF_PIC
+  int string;
+#else
+  const char* string;
+#endif
   token_type type;
 };
 /* maximum key range = 160, duplicates = 0 */
@@ -52,13 +54,13 @@ class lexer_keyword
 private:
   static inline unsigned int hash (const char *str, size_t len);
 public:
-  static const struct keyword_entry *look_up (const char *str, size_t len);
+  static struct keyword_entry *look_up (const char *str, size_t len);
 };
 
 inline unsigned int
 lexer_keyword::hash (const char *str, size_t len)
 {
-  static const unsigned char asso_values[] =
+  static unsigned char asso_values[] =
     {
       162, 162, 162, 162, 162, 162, 162, 162, 162, 162,
       162, 162, 162, 162, 162, 162, 162, 162, 162, 162,
@@ -173,7 +175,7 @@ struct stringpool_t
     char stringpool_str156[sizeof("symbol")];
     char stringpool_str161[sizeof("global")];
   };
-static const struct stringpool_t stringpool_contents =
+static struct stringpool_t stringpool_contents =
   {
     "is",
     "static",
@@ -257,7 +259,7 @@ static const struct stringpool_t stringpool_contents =
     "global"
   };
 #define stringpool ((const char *) &stringpool_contents)
-const struct keyword_entry *
+struct keyword_entry *
 lexer_keyword::look_up (const char *str, size_t len)
 {
   enum
@@ -269,210 +271,135 @@ lexer_keyword::look_up (const char *str, size_t len)
       MAX_HASH_VALUE = 161
     };
 
-  static const struct keyword_entry wordlist[] =
+  static struct keyword_entry wordlist[] =
     {
       {-1,static_cast<token_type>(0)},
       {-1,static_cast<token_type>(0)},
-#line 69 "token.gperf"
       {(int)(size_t)&((struct stringpool_t *)0)->stringpool_str2,          token_type::kw_is},
       {-1,static_cast<token_type>(0)},
       {-1,static_cast<token_type>(0)},
       {-1,static_cast<token_type>(0)},
-#line 90 "token.gperf"
       {(int)(size_t)&((struct stringpool_t *)0)->stringpool_str6,      token_type::kw_static},
       {-1,static_cast<token_type>(0)},
-#line 89 "token.gperf"
       {(int)(size_t)&((struct stringpool_t *)0)->stringpool_str8,         token_type::kw_set},
-#line 97 "token.gperf"
       {(int)(size_t)&((struct stringpool_t *)0)->stringpool_str9,        token_type::kw_true},
-#line 65 "token.gperf"
       {(int)(size_t)&((struct stringpool_t *)0)->stringpool_str10,       token_type::kw_infer},
-#line 91 "token.gperf"
       {(int)(size_t)&((struct stringpool_t *)0)->stringpool_str11,      token_type::kw_string},
-#line 64 "token.gperf"
       {(int)(size_t)&((struct stringpool_t *)0)->stringpool_str12,          token_type::kw_in},
-#line 59 "token.gperf"
       {(int)(size_t)&((struct stringpool_t *)0)->stringpool_str13,         token_type::kw_get},
-#line 68 "token.gperf"
       {(int)(size_t)&((struct stringpool_t *)0)->stringpool_str14,   token_type::kw_intrinsic},
-#line 74 "token.gperf"
       {(int)(size_t)&((struct stringpool_t *)0)->stringpool_str15,       token_type::kw_never},
-#line 88 "token.gperf"
       {(int)(size_t)&((struct stringpool_t *)0)->stringpool_str16,      token_type::kw_return},
-#line 87 "token.gperf"
       {(int)(size_t)&((struct stringpool_t *)0)->stringpool_str17,     token_type::kw_require},
       {-1,static_cast<token_type>(0)},
-#line 67 "token.gperf"
       {(int)(size_t)&((struct stringpool_t *)0)->stringpool_str19,   token_type::kw_interface},
       {-1,static_cast<token_type>(0)},
       {-1,static_cast<token_type>(0)},
-#line 31 "token.gperf"
       {(int)(size_t)&((struct stringpool_t *)0)->stringpool_str22,          token_type::kw_as},
       {-1,static_cast<token_type>(0)},
       {-1,static_cast<token_type>(0)},
-#line 34 "token.gperf"
       {(int)(size_t)&((struct stringpool_t *)0)->stringpool_str25,       token_type::kw_async},
-#line 32 "token.gperf"
       {(int)(size_t)&((struct stringpool_t *)0)->stringpool_str26,      token_type::kw_assert},
-#line 33 "token.gperf"
       {(int)(size_t)&((struct stringpool_t *)0)->stringpool_str27,     token_type::kw_asserts},
       {-1,static_cast<token_type>(0)},
-#line 39 "token.gperf"
       {(int)(size_t)&((struct stringpool_t *)0)->stringpool_str29,        token_type::kw_case},
-#line 66 "token.gperf"
       {(int)(size_t)&((struct stringpool_t *)0)->stringpool_str30,  token_type::kw_instanceof},
       {-1,static_cast<token_type>(0)},
-#line 61 "token.gperf"
       {(int)(size_t)&((struct stringpool_t *)0)->stringpool_str32,          token_type::kw_if},
-#line 104 "token.gperf"
       {(int)(size_t)&((struct stringpool_t *)0)->stringpool_str33,         token_type::kw_var},
-#line 95 "token.gperf"
       {(int)(size_t)&((struct stringpool_t *)0)->stringpool_str34,        token_type::kw_this},
-#line 42 "token.gperf"
       {(int)(size_t)&((struct stringpool_t *)0)->stringpool_str35,       token_type::kw_const},
-#line 52 "token.gperf"
       {(int)(size_t)&((struct stringpool_t *)0)->stringpool_str36,      token_type::kw_export},
-#line 53 "token.gperf"
       {(int)(size_t)&((struct stringpool_t *)0)->stringpool_str37,     token_type::kw_extends},
-#line 75 "token.gperf"
       {(int)(size_t)&((struct stringpool_t *)0)->stringpool_str38,         token_type::kw_new},
-#line 73 "token.gperf"
       {(int)(size_t)&((struct stringpool_t *)0)->stringpool_str39,   token_type::kw_namespace},
-#line 92 "token.gperf"
       {(int)(size_t)&((struct stringpool_t *)0)->stringpool_str40,       token_type::kw_super},
-#line 43 "token.gperf"
       {(int)(size_t)&((struct stringpool_t *)0)->stringpool_str41, token_type::kw_constructor},
       {-1,static_cast<token_type>(0)},
-#line 44 "token.gperf"
       {(int)(size_t)&((struct stringpool_t *)0)->stringpool_str43,    token_type::kw_continue},
       {-1,static_cast<token_type>(0)},
-#line 54 "token.gperf"
       {(int)(size_t)&((struct stringpool_t *)0)->stringpool_str45,       token_type::kw_false},
-#line 77 "token.gperf"
       {(int)(size_t)&((struct stringpool_t *)0)->stringpool_str46,      token_type::kw_number},
       {-1,static_cast<token_type>(0)},
-#line 56 "token.gperf"
       {(int)(size_t)&((struct stringpool_t *)0)->stringpool_str48,         token_type::kw_for},
       {-1,static_cast<token_type>(0)},
-#line 35 "token.gperf"
       {(int)(size_t)&((struct stringpool_t *)0)->stringpool_str50,       token_type::kw_await},
-#line 102 "token.gperf"
       {(int)(size_t)&((struct stringpool_t *)0)->stringpool_str51,      token_type::kw_unique},
-#line 103 "token.gperf"
       {(int)(size_t)&((struct stringpool_t *)0)->stringpool_str52,     token_type::kw_unknown},
-#line 81 "token.gperf"
       {(int)(size_t)&((struct stringpool_t *)0)->stringpool_str53,    token_type::kw_override},
       {-1,static_cast<token_type>(0)},
-#line 40 "token.gperf"
       {(int)(size_t)&((struct stringpool_t *)0)->stringpool_str55,       token_type::kw_catch},
       {-1,static_cast<token_type>(0)},
       {-1,static_cast<token_type>(0)},
       {-1,static_cast<token_type>(0)},
-#line 107 "token.gperf"
       {(int)(size_t)&((struct stringpool_t *)0)->stringpool_str59,        token_type::kw_with},
-#line 96 "token.gperf"
       {(int)(size_t)&((struct stringpool_t *)0)->stringpool_str60,       token_type::kw_throw},
-#line 93 "token.gperf"
       {(int)(size_t)&((struct stringpool_t *)0)->stringpool_str61,      token_type::kw_switch},
-#line 79 "token.gperf"
       {(int)(size_t)&((struct stringpool_t *)0)->stringpool_str62,          token_type::kw_of},
-#line 58 "token.gperf"
       {(int)(size_t)&((struct stringpool_t *)0)->stringpool_str63,    token_type::kw_function},
       {-1,static_cast<token_type>(0)},
-#line 106 "token.gperf"
       {(int)(size_t)&((struct stringpool_t *)0)->stringpool_str65,       token_type::kw_while},
-#line 63 "token.gperf"
       {(int)(size_t)&((struct stringpool_t *)0)->stringpool_str66,      token_type::kw_import},
       {-1,static_cast<token_type>(0)},
-#line 80 "token.gperf"
       {(int)(size_t)&((struct stringpool_t *)0)->stringpool_str68,         token_type::kw_out},
       {-1,static_cast<token_type>(0)},
-#line 62 "token.gperf"
       {(int)(size_t)&((struct stringpool_t *)0)->stringpool_str70,  token_type::kw_implements},
       {-1,static_cast<token_type>(0)},
-#line 47 "token.gperf"
       {(int)(size_t)&((struct stringpool_t *)0)->stringpool_str72,     token_type::kw_default},
-#line 45 "token.gperf"
       {(int)(size_t)&((struct stringpool_t *)0)->stringpool_str73,    token_type::kw_debugger},
-#line 51 "token.gperf"
       {(int)(size_t)&((struct stringpool_t *)0)->stringpool_str74,        token_type::kw_enum},
       {-1,static_cast<token_type>(0)},
-#line 48 "token.gperf"
       {(int)(size_t)&((struct stringpool_t *)0)->stringpool_str76,      token_type::kw_delete},
-#line 46 "token.gperf"
       {(int)(size_t)&((struct stringpool_t *)0)->stringpool_str77,     token_type::kw_declare},
-#line 98 "token.gperf"
       {(int)(size_t)&((struct stringpool_t *)0)->stringpool_str78,         token_type::kw_try},
-#line 57 "token.gperf"
       {(int)(size_t)&((struct stringpool_t *)0)->stringpool_str79,        token_type::kw_from},
-#line 41 "token.gperf"
       {(int)(size_t)&((struct stringpool_t *)0)->stringpool_str80,       token_type::kw_class},
       {-1,static_cast<token_type>(0)},
-#line 83 "token.gperf"
       {(int)(size_t)&((struct stringpool_t *)0)->stringpool_str82,     token_type::kw_private},
-#line 71 "token.gperf"
       {(int)(size_t)&((struct stringpool_t *)0)->stringpool_str83,         token_type::kw_let},
-#line 99 "token.gperf"
       {(int)(size_t)&((struct stringpool_t *)0)->stringpool_str84,        token_type::kw_type},
-#line 70 "token.gperf"
       {(int)(size_t)&((struct stringpool_t *)0)->stringpool_str85,       token_type::kw_keyof},
       {-1,static_cast<token_type>(0)},
       {-1,static_cast<token_type>(0)},
-#line 86 "token.gperf"
       {(int)(size_t)&((struct stringpool_t *)0)->stringpool_str88,    token_type::kw_readonly},
-#line 50 "token.gperf"
       {(int)(size_t)&((struct stringpool_t *)0)->stringpool_str89,        token_type::kw_else},
       {-1,static_cast<token_type>(0)},
-#line 36 "token.gperf"
       {(int)(size_t)&((struct stringpool_t *)0)->stringpool_str91,      token_type::kw_bigint},
       {-1,static_cast<token_type>(0)},
       {-1,static_cast<token_type>(0)},
       {-1,static_cast<token_type>(0)},
       {-1,static_cast<token_type>(0)},
-#line 100 "token.gperf"
       {(int)(size_t)&((struct stringpool_t *)0)->stringpool_str96,      token_type::kw_typeof},
-#line 55 "token.gperf"
       {(int)(size_t)&((struct stringpool_t *)0)->stringpool_str97,     token_type::kw_finally},
       {-1,static_cast<token_type>(0)},
       {-1,static_cast<token_type>(0)},
       {-1,static_cast<token_type>(0)},
-#line 72 "token.gperf"
       {(int)(size_t)&((struct stringpool_t *)0)->stringpool_str101,      token_type::kw_module},
-#line 82 "token.gperf"
       {(int)(size_t)&((struct stringpool_t *)0)->stringpool_str102,     token_type::kw_package},
-#line 30 "token.gperf"
       {(int)(size_t)&((struct stringpool_t *)0)->stringpool_str103,         token_type::kw_any},
-#line 105 "token.gperf"
       {(int)(size_t)&((struct stringpool_t *)0)->stringpool_str104,        token_type::kw_void},
       {-1,static_cast<token_type>(0)},
       {-1,static_cast<token_type>(0)},
       {-1,static_cast<token_type>(0)},
       {-1,static_cast<token_type>(0)},
-#line 101 "token.gperf"
       {(int)(size_t)&((struct stringpool_t *)0)->stringpool_str109,   token_type::kw_undefined},
       {-1,static_cast<token_type>(0)},
-#line 85 "token.gperf"
       {(int)(size_t)&((struct stringpool_t *)0)->stringpool_str111,      token_type::kw_public},
       {-1,static_cast<token_type>(0)},
-#line 29 "token.gperf"
       {(int)(size_t)&((struct stringpool_t *)0)->stringpool_str113,    token_type::kw_abstract},
       {-1,static_cast<token_type>(0)},
       {-1,static_cast<token_type>(0)},
       {-1,static_cast<token_type>(0)},
       {-1,static_cast<token_type>(0)},
       {-1,static_cast<token_type>(0)},
-#line 76 "token.gperf"
       {(int)(size_t)&((struct stringpool_t *)0)->stringpool_str119,        token_type::kw_null},
       {-1,static_cast<token_type>(0)},
-#line 78 "token.gperf"
       {(int)(size_t)&((struct stringpool_t *)0)->stringpool_str121,      token_type::kw_object},
-#line 49 "token.gperf"
       {(int)(size_t)&((struct stringpool_t *)0)->stringpool_str122,          token_type::kw_do},
       {-1,static_cast<token_type>(0)},
       {-1,static_cast<token_type>(0)},
       {-1,static_cast<token_type>(0)},
       {-1,static_cast<token_type>(0)},
-#line 37 "token.gperf"
       {(int)(size_t)&((struct stringpool_t *)0)->stringpool_str127,     token_type::kw_boolean},
       {-1,static_cast<token_type>(0)},
       {-1,static_cast<token_type>(0)},
@@ -485,9 +412,7 @@ lexer_keyword::look_up (const char *str, size_t len)
       {-1,static_cast<token_type>(0)},
       {-1,static_cast<token_type>(0)},
       {-1,static_cast<token_type>(0)},
-#line 84 "token.gperf"
       {(int)(size_t)&((struct stringpool_t *)0)->stringpool_str139,   token_type::kw_protected},
-#line 108 "token.gperf"
       {(int)(size_t)&((struct stringpool_t *)0)->stringpool_str140,       token_type::kw_yield},
       {-1,static_cast<token_type>(0)},
       {-1,static_cast<token_type>(0)},
@@ -498,20 +423,17 @@ lexer_keyword::look_up (const char *str, size_t len)
       {-1,static_cast<token_type>(0)},
       {-1,static_cast<token_type>(0)},
       {-1,static_cast<token_type>(0)},
-#line 38 "token.gperf"
       {(int)(size_t)&((struct stringpool_t *)0)->stringpool_str150,       token_type::kw_break},
       {-1,static_cast<token_type>(0)},
       {-1,static_cast<token_type>(0)},
       {-1,static_cast<token_type>(0)},
       {-1,static_cast<token_type>(0)},
       {-1,static_cast<token_type>(0)},
-#line 94 "token.gperf"
       {(int)(size_t)&((struct stringpool_t *)0)->stringpool_str156,      token_type::kw_symbol},
       {-1,static_cast<token_type>(0)},
       {-1,static_cast<token_type>(0)},
       {-1,static_cast<token_type>(0)},
       {-1,static_cast<token_type>(0)},
-#line 60 "token.gperf"
       {(int)(size_t)&((struct stringpool_t *)0)->stringpool_str161,      token_type::kw_global}
     };
 
@@ -521,7 +443,7 @@ lexer_keyword::look_up (const char *str, size_t len)
 
       if (key <= MAX_HASH_VALUE)
         {
-          int o = wordlist[key].string_offset;
+          int o = wordlist[key].string;
           if (o >= 0)
             {
               const char *s = o + stringpool;
@@ -533,7 +455,6 @@ lexer_keyword::look_up (const char *str, size_t len)
     }
   return 0;
 }
-#line 109 "token.gperf"
 
 }
 
