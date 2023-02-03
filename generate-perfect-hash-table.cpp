@@ -150,8 +150,11 @@ token_type look_up_identifier(const char* identifier, std::size_t size) noexcept
 }
 
 void go() {
-    write_table("generated/perfect-hash-table-generated.cpp", make_perfect_hash_table(table_strategy{
+    write_table("generated/perfect-hash-table-5x-generated.cpp", make_perfect_hash_table(table_strategy{
         .size_strategy = table_size_strategy::five_x,
+    }));
+    write_table("generated/perfect-hash-table-5xnpot-generated.cpp", make_perfect_hash_table(table_strategy{
+        .size_strategy = table_size_strategy::five_x_next_power_of_2,
     }));
 }
 }

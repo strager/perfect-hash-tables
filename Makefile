@@ -18,7 +18,15 @@ gperf_combinations = \
 gperf_sos = $(foreach flags,$(gperf_combinations),build/libtoken-gperf-$(flags)-generated.so)
 gperf_cpps = $(foreach flags,$(gperf_combinations),generated/token-gperf-$(flags)-generated.cpp)
 
-sos = $(gperf_sos) build/libtoken-std-unordered-map.so build/libperfect-hash-table-generated.so
+# Keep in sync with generate-perfect-hash-table.cpp.
+pht_combinations = \
+	5x \
+	5xnpot
+
+pht_sos = $(foreach flags,$(pht_combinations),build/libperfect-hash-table-$(flags)-generated.so)
+pht_cpps = $(foreach flags,$(pht_combinations),generated/perfect-hash-table-$(flags)-generated.cpp)
+
+sos = $(gperf_sos) $(pht_sos) build/libtoken-std-unordered-map.so
 
 .PHONY: all
 all: check build/benchmark keywords.txt non-keywords.txt mixed.txt
@@ -57,9 +65,13 @@ build/libtoken-std-unordered-map.so: token-std-unordered-map.cpp token.h Makefil
 build/generate-perfect-hash-table: generate-perfect-hash-table.cpp token.h perfect-hash-table.h fnv.h Makefile build/stamp
 	$(CXX) $(extra_CXXFLAGS) $(CXXFLAGS) $(LDFLAGS) -o $(@) generate-perfect-hash-table.cpp
 
-build/libperfect-hash-table-generated.so: generated/perfect-hash-table-generated.cpp token.h perfect-hash-table.h fnv.h Makefile build/stamp
-	$(CXX) $(extra_CXXFLAGS) $(CXXFLAGS) $(extra_test_LDFLAGS) $(LDFLAGS) -shared -o $(@) $(<)
-generated/perfect-hash-table-generated.cpp: build/generate-perfect-hash-table Makefile generated/stamp
+define make_pht_so
+build/libperfect-hash-table-$(flags)-generated.so: generated/perfect-hash-table-$(flags)-generated.cpp token.h perfect-hash-table.h fnv.h Makefile build/stamp
+	$$(CXX) $$(extra_CXXFLAGS) $$(CXXFLAGS) $$(extra_test_LDFLAGS) $$(LDFLAGS) -shared -o $$(@) $$(<)
+endef
+$(foreach flags,$(pht_combinations),$(eval $(call make_pht_so)))
+
+$(pht_cpps): build/generate-perfect-hash-table Makefile generated/stamp
 	./build/generate-perfect-hash-table
 
 define make_gperf_so
