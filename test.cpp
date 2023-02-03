@@ -129,28 +129,14 @@ void test_look_up_identifier(const char* name, look_up_identifier_f* look_up_ide
 
     std::fprintf(stderr, "OK: %s\n", name);
 }
-
-void test_so(const char* so_path) {
-    void *so = ::dlopen(so_path, /*flags=*/RTLD_LAZY);
-    if (!so) {
-      std::fprintf(stderr, "fatal: could not load %s: %s\n", so_path, ::dlerror());
-      std::exit(1);
-    }
-    const char* symbol_name = "look_up_identifier";
-    look_up_identifier_f* look_up_identifier = reinterpret_cast<look_up_identifier_f*>(::dlsym(so, symbol_name));
-    if (!look_up_identifier) {
-      std::fprintf(stderr, "fatal: could not load symbol %s in %s: %s\n", symbol_name, so_path, ::dlerror());
-      std::exit(1);
-    }
-
-    test_look_up_identifier(so_path, look_up_identifier);
-}
 }
 }
 
 int main() {
-    for (const char* so_path : pht::implementation_so_paths) {
-        pht::test_so(so_path);
+    std::array<pht::implementation, pht::implementation_count> implementations
+        = pht::load_implementations();
+    for (pht::implementation impl : implementations) {
+        pht::test_look_up_identifier(impl.name, impl.look_up_identifier);
     }
     return 0;
 }
