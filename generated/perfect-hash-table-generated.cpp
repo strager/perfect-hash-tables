@@ -1,5 +1,5 @@
 
-#include "../fnv.h"
+#include "../perfect-hash-table.h"
 #include "../token.h"
 #include <cstddef>
 #include <cstdint>
@@ -12,17 +12,6 @@ constexpr std::uint32_t table_size = 400UL;
 constexpr std::size_t min_keyword_size = 2;
 constexpr std::size_t max_keyword_size = 11;
 
-
-std::uint32_t hash(const char* s, std::size_t size) noexcept {
-    static_assert(min_keyword_size >= 2);
-    std::uint32_t h = hash_basis;
-    // TODO(strager): Play with different character selection schemes.
-    fnv1a32_byte(&h, (std::uint8_t)s[0]);
-    fnv1a32_byte(&h, (std::uint8_t)s[1]);
-    fnv1a32_byte(&h, (std::uint8_t)s[size - 2]);
-    fnv1a32_byte(&h, (std::uint8_t)s[size - 1]);
-    return h;
-}
 
 struct table_entry {
     const char keyword[max_keyword_size + 1];
@@ -439,7 +428,7 @@ token_type look_up_identifier(const char* identifier, std::size_t size) noexcept
         return token_type::identifier;
     }
 
-    std::uint32_t h = hash(identifier, size);
+    std::uint32_t h = hash(hash_basis, identifier, size);
     std::uint32_t index = h % table_size;
 
     const table_entry& entry = table[index];

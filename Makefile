@@ -54,10 +54,10 @@ generated/implementations-generated.inc: Makefile generated/stamp
 build/libtoken-std-unordered-map.so: token-std-unordered-map.cpp token.h Makefile build/stamp
 	$(CXX) $(extra_CXXFLAGS) $(CXXFLAGS) $(extra_test_LDFLAGS) $(LDFLAGS) -shared -o $(@) $(<)
 
-build/generate-perfect-hash-table: generate-perfect-hash-table.cpp token.h Makefile build/stamp
+build/generate-perfect-hash-table: generate-perfect-hash-table.cpp token.h perfect-hash-table.h fnv.h Makefile build/stamp
 	$(CXX) $(extra_CXXFLAGS) $(CXXFLAGS) $(LDFLAGS) -o $(@) generate-perfect-hash-table.cpp
 
-build/libperfect-hash-table-generated.so: generated/perfect-hash-table-generated.cpp token.h Makefile build/stamp
+build/libperfect-hash-table-generated.so: generated/perfect-hash-table-generated.cpp token.h perfect-hash-table.h fnv.h Makefile build/stamp
 	$(CXX) $(extra_CXXFLAGS) $(CXXFLAGS) $(extra_test_LDFLAGS) $(LDFLAGS) -shared -o $(@) $(<)
 generated/perfect-hash-table-generated.cpp: build/generate-perfect-hash-table Makefile generated/stamp
 	./build/generate-perfect-hash-table

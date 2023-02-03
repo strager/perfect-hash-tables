@@ -1,7 +1,7 @@
 // Copyright (C) 2020  Matthew "strager" Glazar
 // See end of file for extended copyright information.
 
-#include "fnv.h"
+#include "perfect-hash-table.h"
 #include "token.h"
 #include <algorithm>
 #include <cerrno>
@@ -16,15 +16,6 @@ struct perfect_hash_table {
     struct table_entry {
         const char* keyword = nullptr;
     };
-
-    unsigned long hash(const char* s, std::size_t size) noexcept {
-        std::uint32_t h = this->hash_basis;
-        fnv1a32_byte(&h, (std::uint8_t)s[0]);
-        fnv1a32_byte(&h, (std::uint8_t)s[1]);
-        fnv1a32_byte(&h, (std::uint8_t)s[size - 2]);
-        fnv1a32_byte(&h, (std::uint8_t)s[size - 1]);
-        return h;
-    }
 
     unsigned long hash_basis;
     unsigned long table_size;
@@ -41,7 +32,7 @@ bool try_add_all_entries(perfect_hash_table& table) {
     }
 
     for (keyword_token kt : keyword_tokens) {
-        std::uint32_t h = table.hash(kt.keyword, std::strlen(kt.keyword));
+        std::uint32_t h = hash(table.hash_basis, kt.keyword, std::strlen(kt.keyword));
         std::uint32_t index = h % table.table_size;
         bool taken = table.entries[index].keyword != nullptr;
         if (taken) {
@@ -79,7 +70,7 @@ perfect_hash_table make_perfect_hash_table() {
 
 void write_table(FILE* file, const perfect_hash_table& table) {
     std::fprintf(file, R"(
-#include "../fnv.h"
+#include "../perfect-hash-table.h"
 #include "../token.h"
 #include <cstddef>
 #include <cstdint>
@@ -95,17 +86,6 @@ constexpr std::size_t max_keyword_size = %lu;
 )", table.hash_basis, table.table_size, table.min_keyword_size, table.max_keyword_size);
 
     std::fprintf(file, "%s", R"(
-std::uint32_t hash(const char* s, std::size_t size) noexcept {
-    static_assert(min_keyword_size >= 2);
-    std::uint32_t h = hash_basis;
-    // TODO(strager): Play with different character selection schemes.
-    fnv1a32_byte(&h, (std::uint8_t)s[0]);
-    fnv1a32_byte(&h, (std::uint8_t)s[1]);
-    fnv1a32_byte(&h, (std::uint8_t)s[size - 2]);
-    fnv1a32_byte(&h, (std::uint8_t)s[size - 1]);
-    return h;
-}
-
 struct table_entry {
     const char keyword[max_keyword_size + 1];
     token_type type;
@@ -131,7 +111,7 @@ token_type look_up_identifier(const char* identifier, std::size_t size) noexcept
         return token_type::identifier;
     }
 
-    std::uint32_t h = hash(identifier, size);
+    std::uint32_t h = hash(hash_basis, identifier, size);
     std::uint32_t index = h % table_size;
 
     const table_entry& entry = table[index];
