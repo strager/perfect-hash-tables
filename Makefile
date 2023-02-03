@@ -1,7 +1,7 @@
 SHELL = bash
 
 extra_test_LDFLAGS = -Wl,--undefined=look_up_identifier
-extra_CXXFLAGS = -std=c++17 -g -O3 -fvisibility=hidden -fPIC
+extra_CXXFLAGS = -std=c++20 -g -O3 -fvisibility=hidden -fPIC
 
 gperf_combinations = \
 	_ \

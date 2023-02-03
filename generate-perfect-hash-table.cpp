@@ -4,6 +4,7 @@
 #include "perfect-hash-table.h"
 #include "token.h"
 #include <algorithm>
+#include <bit>
 #include <cerrno>
 #include <cstdio>
 #include <cstdlib>
@@ -12,6 +13,15 @@
 
 namespace pht {
 namespace {
+enum class table_size_strategy {
+    five_x,
+    five_x_next_power_of_2,
+};
+
+struct table_strategy {
+    table_size_strategy size_strategy;
+};
+
 struct perfect_hash_table {
     struct table_entry {
         const char* keyword = nullptr;
@@ -44,9 +54,16 @@ bool try_add_all_entries(perfect_hash_table& table) {
     return true;
 }
 
-perfect_hash_table make_perfect_hash_table() {
+perfect_hash_table make_perfect_hash_table(table_strategy strategy) {
     perfect_hash_table table;
-    table.table_size = std::size(keyword_tokens) * 5;
+    switch (strategy.size_strategy) {
+        case table_size_strategy::five_x:
+            table.table_size = std::size(keyword_tokens) * 5;
+            break;
+        case table_size_strategy::five_x_next_power_of_2:
+            table.table_size = std::bit_ceil(std::size(keyword_tokens) * 5);
+            break;
+    }
 
     table.min_keyword_size = 0xffffffff;
     table.max_keyword_size = 0;
@@ -125,7 +142,9 @@ token_type look_up_identifier(const char* identifier, std::size_t size) noexcept
 }
 
 void go() {
-    perfect_hash_table table = make_perfect_hash_table();
+    perfect_hash_table table = make_perfect_hash_table(table_strategy{
+        .size_strategy = table_size_strategy::five_x,
+    });
 
     const char* file_path = "generated/perfect-hash-table-generated.cpp";
     FILE* file = std::fopen(file_path, "wb");
