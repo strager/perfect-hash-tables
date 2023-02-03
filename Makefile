@@ -51,7 +51,7 @@ build/test: $(sos) test.cpp token.h implementations.h generated/implementations-
 	$(CXX) $(extra_CXXFLAGS) $(CXXFLAGS) $(LDFLAGS) -o $(@) test.cpp
 
 build/benchmark: $(sos) benchmark.cpp token.h implementations.h generated/implementations-generated.inc Makefile build/stamp
-	$(CXX) -fno-lto $(extra_CXXFLAGS) $(CXXFLAGS) $(LDFLAGS) -o $(@) benchmark.cpp -lbenchmark -lbenchmark_main
+	$(CXX) -fno-lto $(extra_CXXFLAGS) $(CXXFLAGS) $(LDFLAGS) -o $(@) benchmark.cpp -lbenchmark
 
 build/map-to-tokens: build/libtoken-gperf-_-generated.so map-to-tokens.cpp file.h lex.h token.h Makefile build/stamp
 	$(CXX) $(extra_CXXFLAGS) $(CXXFLAGS) $(LDFLAGS) -o $(@) map-to-tokens.cpp build/libtoken-gperf-_-generated.so

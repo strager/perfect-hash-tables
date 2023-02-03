@@ -6,58 +6,44 @@
 #include "lex.h"
 #include "token.h"
 #include <benchmark/benchmark.h>
+#include <string>
+#include <vector>
 
 namespace pht {
 namespace {
-const std::array<implementation, implementation_count>& lazy_load_implementations() {
-    static std::array<implementation, implementation_count> implementations
-       = load_implementations();
-    return implementations;
-}
-
-void add_implementations_to_benchmark(::benchmark::internal::Benchmark* b) {
-    int index = 0;
-    for (implementation _impl : lazy_load_implementations()) {
-        b->Arg(index++);
-    }
-}
-
-void non_keywords(::benchmark::State& state) {
-    implementation impl = lazy_load_implementations().at(state.range(0));
-    std::vector<char> code = read_file("non-keywords.txt");
-    std::vector<lexed_token> tokens = lex(code.data());
+void benchmark_look_up_identifier(::benchmark::State& state, implementation impl, const std::vector<lexed_token>& tokens) {
     for (auto _ : state) {
         for (const lexed_token& t : tokens) {
             ::benchmark::DoNotOptimize(impl.look_up_identifier(t.begin, t.size));
         }
     }
 }
-BENCHMARK(non_keywords)->Apply(add_implementations_to_benchmark);
+}
+}
 
-void keywords(::benchmark::State& state) {
-    implementation impl = lazy_load_implementations().at(state.range(0));
-    std::vector<char> code = read_file("keywords.txt");
-    std::vector<lexed_token> tokens = lex(code.data());
-    for (auto _ : state) {
-        for (const lexed_token& t : tokens) {
-            ::benchmark::DoNotOptimize(impl.look_up_identifier(t.begin, t.size));
-        }
-    }
-}
-BENCHMARK(keywords)->Apply(add_implementations_to_benchmark);
+int main(int argc, char** argv) {
+    std::vector<char> keywords_code = pht::read_file("keywords.txt");
+    std::vector<pht::lexed_token> keywords_tokens = pht::lex(keywords_code.data());
 
-void mixed(::benchmark::State& state) {
-    implementation impl = lazy_load_implementations().at(state.range(0));
-    std::vector<char> code = read_file("mixed.txt");
-    std::vector<lexed_token> tokens = lex(code.data());
-    for (auto _ : state) {
-        for (const lexed_token& t : tokens) {
-            ::benchmark::DoNotOptimize(impl.look_up_identifier(t.begin, t.size));
-        }
+    std::vector<char> non_keywords_code = pht::read_file("non-keywords.txt");
+    std::vector<pht::lexed_token> non_keywords_tokens = pht::lex(non_keywords_code.data());
+
+    std::vector<char> mixed_code = pht::read_file("mixed.txt");
+    std::vector<pht::lexed_token> mixed_tokens = pht::lex(mixed_code.data());
+
+    for (pht::implementation impl : pht::load_implementations()) {
+        ::benchmark::RegisterBenchmark((std::string("keywords/") + impl.name).c_str(), pht::benchmark_look_up_identifier, impl, keywords_tokens);
     }
-}
-BENCHMARK(mixed)->Apply(add_implementations_to_benchmark);
-}
+    for (pht::implementation impl : pht::load_implementations()) {
+        ::benchmark::RegisterBenchmark((std::string("nonkeywords/") + impl.name).c_str(), pht::benchmark_look_up_identifier, impl, non_keywords_tokens);
+    }
+    for (pht::implementation impl : pht::load_implementations()) {
+        ::benchmark::RegisterBenchmark((std::string("mixed/") + impl.name).c_str(), pht::benchmark_look_up_identifier, impl, mixed_tokens);
+    }
+
+    ::benchmark::Initialize(&argc, argv);
+    ::benchmark::RunSpecifiedBenchmarks();
+    ::benchmark::Shutdown();
 }
 
 // quick-lint-js finds bugs in JavaScript programs.
