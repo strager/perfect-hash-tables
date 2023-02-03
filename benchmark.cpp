@@ -18,6 +18,10 @@ void benchmark_look_up_identifier(::benchmark::State& state, implementation impl
         }
     }
 }
+
+std::string benchmark_name(const char* test_case, implementation impl) {
+    return std::string(test_case) + "/" + impl.name;
+}
 }
 }
 
@@ -32,13 +36,13 @@ int main(int argc, char** argv) {
     std::vector<pht::lexed_token> mixed_tokens = pht::lex(mixed_code.data());
 
     for (pht::implementation impl : pht::load_implementations()) {
-        ::benchmark::RegisterBenchmark((std::string("keywords/") + impl.name).c_str(), pht::benchmark_look_up_identifier, impl, keywords_tokens);
+        ::benchmark::RegisterBenchmark(pht::benchmark_name("keywords", impl).c_str(), pht::benchmark_look_up_identifier, impl, keywords_tokens);
     }
     for (pht::implementation impl : pht::load_implementations()) {
-        ::benchmark::RegisterBenchmark((std::string("nonkeywords/") + impl.name).c_str(), pht::benchmark_look_up_identifier, impl, non_keywords_tokens);
+        ::benchmark::RegisterBenchmark(pht::benchmark_name("nonkeywords", impl).c_str(), pht::benchmark_look_up_identifier, impl, non_keywords_tokens);
     }
     for (pht::implementation impl : pht::load_implementations()) {
-        ::benchmark::RegisterBenchmark((std::string("mixed/") + impl.name).c_str(), pht::benchmark_look_up_identifier, impl, mixed_tokens);
+        ::benchmark::RegisterBenchmark(pht::benchmark_name("mixed", impl).c_str(), pht::benchmark_look_up_identifier, impl, mixed_tokens);
     }
 
     ::benchmark::Initialize(&argc, argv);
