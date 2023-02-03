@@ -27,11 +27,11 @@ check: build/test
 
 .PHONY: clean
 clean:
-	rm -f $(gperf_sos) build/test
+	rm -rf build/
 
 .PHONY: clean-all
 clean-all: clean
-	rm -f $(gperf_cpps) generated/implementations-generated.inc
+	rm -rf generated/
 
 build/test: $(gperf_sos) test.cpp token.h implementations.h generated/implementations-generated.inc Makefile build
 	$(CXX) $(extra_CXXFLAGS) $(CXXFLAGS) $(LDFLAGS) -o $(@) test.cpp
