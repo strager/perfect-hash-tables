@@ -8,7 +8,7 @@
 
 namespace pht {
 constexpr const char* implementation_so_paths[] = {
-    "./libtoken-gperf-generated.so",
+#include "implementations-generated.inc"
 };
 }
 
