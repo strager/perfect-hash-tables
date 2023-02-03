@@ -19,10 +19,10 @@ gperf_sos = $(foreach flags,$(gperf_combinations),build/libtoken-gperf-$(flags)-
 gperf_cpps = $(foreach flags,$(gperf_combinations),generated/token-gperf-$(flags)-generated.cpp)
 
 .PHONY: all
-all: check build/benchmark
+all: check build/benchmark keywords.txt non-keywords.txt mixed.txt
 
 .PHONY: bench
-bench: build/benchmark
+bench: build/benchmark keywords.txt non-keywords.txt mixed.txt
 	./build/benchmark
 
 .PHONY: check
@@ -43,6 +43,9 @@ build/test: $(gperf_sos) test.cpp token.h implementations.h generated/implementa
 build/benchmark: $(gperf_sos) benchmark.cpp token.h implementations.h generated/implementations-generated.inc Makefile build/stamp
 	$(CXX) -fno-lto $(extra_CXXFLAGS) $(CXXFLAGS) $(LDFLAGS) -o $(@) benchmark.cpp -lbenchmark -lbenchmark_main
 
+build/map-to-tokens: build/libtoken-gperf-_-generated.so map-to-tokens.cpp file.h lex.h token.h Makefile build/stamp
+	$(CXX) $(extra_CXXFLAGS) $(CXXFLAGS) $(LDFLAGS) -o $(@) map-to-tokens.cpp build/libtoken-gperf-_-generated.so
+
 generated/implementations-generated.inc: Makefile generated/stamp
 	printf '"./%s",\n' $(gperf_sos) >$(@)
 
@@ -58,6 +61,9 @@ generated/token-gperf-$(flags)-generated.cpp: token.gperf Makefile generated/sta
 	set -e -o pipefail ; gperf $(subst _, ,$(flags)) $$(<) | sed -e '/^#line/d' >$$(@)
 endef
 $(foreach flags,$(gperf_combinations),$(eval $(call make_gperf_so)))
+
+keywords.txt non-keywords.txt mixed.txt: build/map-to-tokens jquery-3.5.1.js
+	./build/map-to-tokens
 
 build/stamp:
 	mkdir -p build

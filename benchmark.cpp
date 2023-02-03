@@ -1,7 +1,9 @@
 // Copyright (C) 2020  Matthew "strager" Glazar
 // See end of file for extended copyright information.
 
+#include "file.h"
 #include "implementations.h"
+#include "lex.h"
 #include "token.h"
 #include <benchmark/benchmark.h>
 
@@ -20,13 +22,41 @@ void add_implementations_to_benchmark(::benchmark::internal::Benchmark* b) {
     }
 }
 
-void failures(::benchmark::State& state) {
+void non_keywords(::benchmark::State& state) {
     implementation impl = lazy_load_implementations().at(state.range(0));
+    std::vector<char> code = read_file("non-keywords.txt");
+    std::vector<lexed_token> tokens = lex(code.data());
     for (auto _ : state) {
-        ::benchmark::DoNotOptimize(impl.look_up_identifier("banana", 6));
+        for (const lexed_token& t : tokens) {
+            ::benchmark::DoNotOptimize(impl.look_up_identifier(t.begin, t.size));
+        }
     }
 }
-BENCHMARK(failures)->Apply(add_implementations_to_benchmark);
+BENCHMARK(non_keywords)->Apply(add_implementations_to_benchmark);
+
+void keywords(::benchmark::State& state) {
+    implementation impl = lazy_load_implementations().at(state.range(0));
+    std::vector<char> code = read_file("keywords.txt");
+    std::vector<lexed_token> tokens = lex(code.data());
+    for (auto _ : state) {
+        for (const lexed_token& t : tokens) {
+            ::benchmark::DoNotOptimize(impl.look_up_identifier(t.begin, t.size));
+        }
+    }
+}
+BENCHMARK(keywords)->Apply(add_implementations_to_benchmark);
+
+void mixed(::benchmark::State& state) {
+    implementation impl = lazy_load_implementations().at(state.range(0));
+    std::vector<char> code = read_file("mixed.txt");
+    std::vector<lexed_token> tokens = lex(code.data());
+    for (auto _ : state) {
+        for (const lexed_token& t : tokens) {
+            ::benchmark::DoNotOptimize(impl.look_up_identifier(t.begin, t.size));
+        }
+    }
+}
+BENCHMARK(mixed)->Apply(add_implementations_to_benchmark);
 }
 }
 
