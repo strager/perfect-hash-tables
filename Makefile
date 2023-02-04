@@ -22,34 +22,14 @@ gperf_cpps = $(foreach flags,$(gperf_combinations),generated/gperf$(flags).cpp)
 
 # Keep in sync with generate-pht.cpp.
 pht_combinations = \
-	small-15-xx364 \
-	small-23-xx364 \
-	small-27-xx364 \
-	small-29-xx364 \
 	pot-15-xx364 \
 	pot-23-xx364 \
 	pot-27-xx364 \
 	pot-29-xx364 \
-	small-15-fnv1a32 \
-	small-23-fnv1a32 \
-	small-27-fnv1a32 \
-	small-29-fnv1a32 \
 	pot-15-fnv1a32 \
 	pot-23-fnv1a32 \
 	pot-27-fnv1a32 \
 	pot-29-fnv1a32 \
-	small-15-lehmer \
-	small-23-lehmer \
-	small-27-lehmer \
-	small-29-lehmer \
-	pot-15-lehmer \
-	pot-23-lehmer \
-	pot-27-lehmer \
-	pot-29-lehmer \
-	small-15-lehmer128 \
-	small-23-lehmer128 \
-	small-27-lehmer128 \
-	small-29-lehmer128 \
 	pot-15-lehmer128 \
 	pot-23-lehmer128 \
 	pot-27-lehmer128 \
@@ -57,11 +37,7 @@ pht_combinations = \
 	small-15-icrc32 \
 	small-23-icrc32 \
 	small-27-icrc32 \
-	small-29-icrc32 \
-	pot-15-icrc32 \
-	pot-23-icrc32 \
-	pot-27-icrc32 \
-	pot-29-icrc32
+	small-29-icrc32
 
 pht_sos = $(foreach flags,$(pht_combinations),build/pht-$(flags).so)
 pht_cpps = $(foreach flags,$(pht_combinations),generated/pht-$(flags).cpp)

@@ -275,7 +275,7 @@ void go() {
     keyword_statistics stats = make_stats();
 
     std::vector<std::thread> threads;
-    for (hash_strategy hasher : {hash_strategy::fnv1a32, hash_strategy::xx3_64, hash_strategy::intel_crc32, hash_strategy::lehmer, hash_strategy::lehmer_128}) {
+    for (hash_strategy hasher : {hash_strategy::fnv1a32, hash_strategy::xx3_64, hash_strategy::intel_crc32, hash_strategy::lehmer_128}) {
         std::string hasher_tag;
         switch (hasher) {
             case hash_strategy::fnv1a32: hasher_tag = "fnv1a32"; break;
@@ -291,6 +291,13 @@ void go() {
             }
             std::string selection_tag = std::to_string(character_selection);
             for (table_size_strategy table_size : {table_size_strategy::smallest, table_size_strategy::power_of_2}) {
+                // Prune slow implementations.
+                if (table_size == table_size_strategy::smallest && hasher == hash_strategy::fnv1a32) continue;
+                if (table_size == table_size_strategy::smallest && hasher == hash_strategy::lehmer_128) continue;
+                if (table_size == table_size_strategy::power_of_2 && hasher == hash_strategy::intel_crc32) continue;
+                // Prune more implementations.
+                if (table_size == table_size_strategy::smallest && hasher == hash_strategy::xx3_64) continue;
+
                 std::string table_size_tag;
                 switch (table_size) {
                     case table_size_strategy::smallest: table_size_tag = "small"; break;
