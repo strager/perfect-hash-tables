@@ -16,15 +16,14 @@ namespace pht {
 // if (1<<4) is set: size
 using character_selection_mask = std::uint8_t;
 
+template <class Hasher>
 [[gnu::always_inline]]
-inline std::uint32_t hash(character_selection_mask mask, std::uint32_t hash_basis, const char* s, std::size_t size) noexcept {
-    fnv1a32 hasher(hash_basis);
+inline void hash_selected_characters(character_selection_mask mask, Hasher& hasher, const char* s, std::size_t size) noexcept {
     if (mask & (1 << 0)) hasher.byte((std::uint8_t)s[0]);
     if (mask & (1 << 1)) hasher.byte((std::uint8_t)s[1]);
     if (mask & (1 << 2)) hasher.byte((std::uint8_t)s[size - 1]);
     if (mask & (1 << 3)) hasher.byte((std::uint8_t)s[size - 2]);
     if (mask & (1 << 4)) hasher.byte((std::uint8_t)size);
-    return hasher.hash();
 }
 }
 

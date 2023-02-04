@@ -369,8 +369,9 @@ token_type look_up_identifier(const char* identifier, std::size_t size) noexcept
         return token_type::identifier;
     }
 
-    std::uint32_t h = hash(character_selection, hash_basis, identifier, size);
-    std::uint32_t index = h % table_size;
+    fnv1a32 hasher(hash_basis);
+    hash_selected_characters(character_selection, hasher, identifier, size);
+    std::uint32_t index = hasher.hash() % table_size;
 
     const table_entry& entry = table[index];
     if (std::strncmp(identifier, entry.keyword, size) == 0) {

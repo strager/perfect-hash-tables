@@ -52,8 +52,9 @@ bool try_add_all_entries(perfect_hash_table& table) {
     }
 
     for (keyword_token kt : keyword_tokens) {
-        std::uint32_t h = hash(table.character_selection, table.hash_basis, kt.keyword, std::strlen(kt.keyword));
-        std::uint32_t index = h % table.table_size;
+        fnv1a32 hasher(table.hash_basis);
+        hash_selected_characters(table.character_selection, hasher, kt.keyword, std::strlen(kt.keyword));
+        std::uint32_t index = hasher.hash() % table.table_size;
         bool taken = table.entries[index].keyword != nullptr;
         if (taken) {
             return false;
@@ -213,8 +214,9 @@ token_type look_up_identifier(const char* identifier, std::size_t size) noexcept
         return token_type::identifier;
     }
 
-    std::uint32_t h = hash(character_selection, hash_basis, identifier, size);
-    std::uint32_t index = h % table_size;
+    fnv1a32 hasher(hash_basis);
+    hash_selected_characters(character_selection, hasher, identifier, size);
+    std::uint32_t index = hasher.hash() % table_size;
 
     const table_entry& entry = table[index];
     if (std::strncmp(identifier, entry.keyword, size) == 0) {
