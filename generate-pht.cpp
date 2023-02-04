@@ -88,9 +88,9 @@ keyword_statistics make_stats() {
     return stats;
 }
 
-perfect_hash_table make_perfect_hash_table(table_strategy strategy) {
+perfect_hash_table make_perfect_hash_table(const keyword_statistics& stats, table_strategy strategy) {
     perfect_hash_table table;
-    table.stats = make_stats();
+    table.stats = stats;
 
     unsigned long max_table_size = std::size(keyword_tokens) * 10;
     switch (strategy.size_strategy) {
@@ -199,10 +199,11 @@ token_type look_up_identifier(const char* identifier, std::size_t size) noexcept
 }
 
 void go() {
-    write_table("generated/pht-small.cpp", make_perfect_hash_table(table_strategy{
+    keyword_statistics stats = make_stats();
+    write_table("generated/pht-small.cpp", make_perfect_hash_table(stats, table_strategy{
         .size_strategy = table_size_strategy::smallest,
     }));
-    write_table("generated/pht-pot.cpp", make_perfect_hash_table(table_strategy{
+    write_table("generated/pht-pot.cpp", make_perfect_hash_table(stats, table_strategy{
         .size_strategy = table_size_strategy::power_of_2,
     }));
 }
