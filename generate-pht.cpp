@@ -290,20 +290,20 @@ void go() {
                 continue;
             }
             std::string selection_tag = std::to_string(character_selection);
-            threads.emplace_back([=]() -> void {
-                write_table("generated/pht-small-" + selection_tag + "-" + hasher_tag + ".cpp", make_perfect_hash_table(stats, table_strategy{
-                    .size_strategy = table_size_strategy::smallest,
-                    .character_selection = character_selection,
-                    .hasher = hasher,
-                }));
-            });
-            threads.emplace_back([=]() -> void {
-                write_table("generated/pht-pot-" + selection_tag + "-" + hasher_tag + ".cpp", make_perfect_hash_table(stats, table_strategy{
-                    .size_strategy = table_size_strategy::power_of_2,
-                    .character_selection = character_selection,
-                    .hasher = hasher,
-                }));
-            });
+            for (table_size_strategy table_size : {table_size_strategy::smallest, table_size_strategy::power_of_2}) {
+                std::string table_size_tag;
+                switch (table_size) {
+                    case table_size_strategy::smallest: table_size_tag = "small"; break;
+                    case table_size_strategy::power_of_2: table_size_tag = "pot"; break;
+                }
+                threads.emplace_back([=]() -> void {
+                    write_table("generated/pht-" + table_size_tag + "-" + selection_tag + "-" + hasher_tag + ".cpp", make_perfect_hash_table(stats, table_strategy{
+                        .size_strategy = table_size,
+                        .character_selection = character_selection,
+                        .hasher = hasher,
+                    }));
+                });
+            }
         }
     }
 
