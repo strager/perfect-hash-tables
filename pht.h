@@ -21,21 +21,17 @@ using character_selection_mask = std::uint8_t;
 template <class Hasher>
 [[gnu::always_inline]]
 inline void hash_selected_characters(character_selection_mask mask, Hasher& hasher, const char* s, std::size_t size) noexcept {
+    std::array<std::uint8_t, 5> bytes;
+    int i = 0;
+    if (mask & (1 << 0)) bytes[i++] = (std::uint8_t)s[0];
+    if (mask & (1 << 1)) bytes[i++] = (std::uint8_t)s[1];
+    if (mask & (1 << 2)) bytes[i++] = (std::uint8_t)s[size - 1];
+    if (mask & (1 << 3)) bytes[i++] = (std::uint8_t)s[size - 2];
+    if (mask & (1 << 4)) bytes[i++] = (std::uint8_t)size;
     if (std::popcount(mask) == 4) {
-        std::array<std::uint8_t, 4> bytes;
-        int i = 0;
-        if (mask & (1 << 0)) bytes[i++] = (std::uint8_t)s[0];
-        if (mask & (1 << 1)) bytes[i++] = (std::uint8_t)s[1];
-        if (mask & (1 << 2)) bytes[i++] = (std::uint8_t)s[size - 1];
-        if (mask & (1 << 3)) bytes[i++] = (std::uint8_t)s[size - 2];
-        if (mask & (1 << 4)) bytes[i++] = (std::uint8_t)size;
         hasher.bytes_4(bytes.data());
     } else {
-        if (mask & (1 << 0)) hasher.byte((std::uint8_t)s[0]);
-        if (mask & (1 << 1)) hasher.byte((std::uint8_t)s[1]);
-        if (mask & (1 << 2)) hasher.byte((std::uint8_t)s[size - 1]);
-        if (mask & (1 << 3)) hasher.byte((std::uint8_t)s[size - 2]);
-        if (mask & (1 << 4)) hasher.byte((std::uint8_t)size);
+        hasher.bytes(bytes.data(), bytes.size());
     }
 }
 }

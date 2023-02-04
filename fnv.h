@@ -19,6 +19,13 @@ class fnv1a32 {
     }
 
     [[gnu::always_inline]]
+    void bytes(const std::uint8_t* bytes, std::size_t length) noexcept {
+        for (std::size_t i = 0; i < length; ++i) {
+            this->byte(bytes[i]);
+        }
+    }
+
+    [[gnu::always_inline]]
     void bytes_4(const std::uint8_t* bytes) noexcept {
         this->byte(bytes[0]);
         this->byte(bytes[1]);
