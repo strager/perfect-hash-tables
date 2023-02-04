@@ -1,3 +1,14 @@
+## things to try
+
+* put full hash in table (optimize lookup failures)
+* two-level hash table
+* check first character
+* check first two characters
+* check length
+* move string data out of line
+* early exit if not 'a'..'z'
+* take middle bits of hash instead of last bits (power-of-two tables)
+
 ## gperf (stock) vs gperf --compare-lengths
 
 It looks like the extra length compare is harder to predict on my 5950X:
