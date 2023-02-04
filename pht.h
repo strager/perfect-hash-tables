@@ -83,7 +83,12 @@ class intel_crc32_intrinsic_hasher {
 
     [[gnu::always_inline]]
     void bytes_4(const std::uint8_t* bytes) noexcept {
-        this->bytes(bytes, 4);
+        std::uint32_t dword =
+            std::uint32_t(bytes[0]) << 0 |
+            std::uint32_t(bytes[1]) << 8 |
+            std::uint32_t(bytes[2]) << 16 |
+            std::uint32_t(bytes[3]) << 24;
+        this->hash_ = ::_mm_crc32_u32(this->hash_, dword);
     }
 
     std::uint32_t hash() const noexcept { return this->hash_; }
