@@ -18,6 +18,14 @@ class fnv1a32 {
         this->hash_ = this->hash_ * 0x01000193;
     }
 
+    [[gnu::always_inline]]
+    void bytes_4(const std::uint8_t* bytes) noexcept {
+        this->byte(bytes[0]);
+        this->byte(bytes[1]);
+        this->byte(bytes[2]);
+        this->byte(bytes[3]);
+    }
+
     std::uint32_t hash() const noexcept { return this->hash_; }
 
     private:
