@@ -238,6 +238,10 @@ void go() {
     keyword_statistics stats = make_stats();
 
     for (character_selection_mask character_selection : stats.unique_character_selections) {
+        if (std::popcount(character_selection) == 5) {
+            // Too expensive. Ignore.
+            continue;
+        }
         std::string selection_tag = std::to_string(character_selection);
         write_table("generated/pht-small-" + selection_tag + ".cpp", make_perfect_hash_table(stats, table_strategy{
             .size_strategy = table_size_strategy::smallest,

@@ -24,12 +24,10 @@ pht_combinations = \
 	small-23 \
 	small-27 \
 	small-29 \
-	small-31 \
 	pot-15 \
 	pot-23 \
 	pot-27 \
-	pot-29 \
-	pot-31
+	pot-29
 
 pht_sos = $(foreach flags,$(pht_combinations),build/pht-$(flags).so)
 pht_cpps = $(foreach flags,$(pht_combinations),generated/pht-$(flags).cpp)
