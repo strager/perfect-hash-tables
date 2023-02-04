@@ -10,4 +10,6 @@
 "./build/gperf--compare-lengths_--seven-bit.so",
 "./build/pht-small.so",
 "./build/pht-pot.so",
+"./build/linear-packed-sized.so",
+"./build/linear-packed-z.so",
 "./build/std-unordered-map.so",

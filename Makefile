@@ -26,7 +26,15 @@ pht_combinations = \
 pht_sos = $(foreach flags,$(pht_combinations),build/pht-$(flags).so)
 pht_cpps = $(foreach flags,$(pht_combinations),generated/pht-$(flags).cpp)
 
-sos = $(gperf_sos) $(pht_sos) build/std-unordered-map.so
+custom_combinations = \
+	linear-packed-sized \
+	linear-packed-z \
+	std-unordered-map
+
+custom_sos = $(foreach name,$(custom_combinations),build/$(name).so)
+custom_cpps = $(foreach name,$(custom_combinations),$(name).cpp)
+
+sos = $(gperf_sos) $(pht_sos) $(custom_sos)
 
 .PHONY: all
 all: check build/benchmark keywords.txt non-keywords.txt mixed.txt
@@ -59,8 +67,11 @@ build/map-to-tokens: build/gperf_.so map-to-tokens.cpp file.h lex.h token.h Make
 generated/implementations.inc: Makefile generated/stamp
 	printf '"./%s",\n' $(sos) >$(@)
 
-build/std-unordered-map.so: std-unordered-map.cpp token.h Makefile build/stamp
-	$(CXX) $(extra_CXXFLAGS) $(CXXFLAGS) $(extra_test_LDFLAGS) $(LDFLAGS) -shared -o $(@) $(<)
+define make_custom_so
+build/$(name).so: $(name).cpp token.h Makefile build/stamp
+	$$(CXX) $$(extra_CXXFLAGS) $$(CXXFLAGS) $$(extra_test_LDFLAGS) $$(LDFLAGS) -shared -o $$(@) $$(<)
+endef
+$(foreach name,$(custom_combinations),$(eval $(call make_custom_so)))
 
 build/generate-pht: generate-pht.cpp token.h pht.h fnv.h Makefile build/stamp
 	$(CXX) $(extra_CXXFLAGS) $(CXXFLAGS) $(LDFLAGS) -o $(@) generate-pht.cpp
