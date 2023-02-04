@@ -7,6 +7,7 @@
 #include "fnv.h"
 #include <array>
 #include <bit>
+#include <cassert>
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
@@ -34,6 +35,17 @@ class xx3_64_hasher {
     [[gnu::always_inline]]
     void bytes_4(const std::uint8_t* bytes) noexcept {
         this->bytes(bytes, 4);
+    }
+
+    [[gnu::always_inline]]
+    void dword(std::uint32_t dword) noexcept {
+        std::uint8_t bytes[] = {
+            std::uint8_t(dword >> 0),
+            std::uint8_t(dword >> 8),
+            std::uint8_t(dword >> 16),
+            std::uint8_t(dword >> 24),
+        };
+        this->bytes_4(bytes);
     }
 
     std::uint32_t hash() const noexcept { return (std::uint32_t) this->hash_; }
@@ -64,6 +76,17 @@ class intel_crc32_hasher {
         this->bytes(bytes, 4);
     }
 
+    [[gnu::always_inline]]
+    void dword(std::uint32_t dword) noexcept {
+        std::uint8_t bytes[] = {
+            std::uint8_t(dword >> 0),
+            std::uint8_t(dword >> 8),
+            std::uint8_t(dword >> 16),
+            std::uint8_t(dword >> 24),
+        };
+        this->bytes_4(bytes);
+    }
+
     std::uint32_t hash() const noexcept { return this->hash_; }
 
   private:
@@ -89,6 +112,11 @@ class intel_crc32_intrinsic_hasher {
             std::uint32_t(bytes[1]) << 8 |
             std::uint32_t(bytes[2]) << 16 |
             std::uint32_t(bytes[3]) << 24;
+        this->dword(dword);
+    }
+
+    [[gnu::always_inline]]
+    void dword(std::uint32_t dword) noexcept {
         this->hash_ = ::_mm_crc32_u32(this->hash_, dword);
     }
 
@@ -115,6 +143,11 @@ class lehmer_hasher {
             std::uint32_t(bytes[1]) << 8 |
             std::uint32_t(bytes[2]) << 16 |
             std::uint32_t(bytes[3]) << 24;
+        this->dword(dword);
+    }
+
+    [[gnu::always_inline]]
+    void dword(std::uint32_t dword) noexcept {
         this->hash_ = mix(dword ^ this->hash_);
     }
 
@@ -136,32 +169,67 @@ class lehmer_hasher {
 template <class Hasher>
 [[gnu::always_inline]]
 inline void hash_selected_characters(character_selection_mask mask, Hasher& hasher, const char* s, std::size_t size) noexcept {
-    std::array<std::uint8_t, 5> bytes;
-    int i = 0;
-
-    if ((mask & (3 << 0)) == (3 << 0)) {
-        // Copy two bytes at once:
-        std::memcpy(&bytes[i], s, 2);
-        i += 2;
-    } else {
-        if (mask & (1 << 0)) bytes[i++] = (std::uint8_t)s[0];
-        if (mask & (1 << 1)) bytes[i++] = (std::uint8_t)s[1];
-    }
-
-    if ((mask & (3 << 2)) == (3 << 2)) {
-        // Copy two bytes at once:
-        std::memcpy(&bytes[i], &s[size-2], 2);
-        i += 2;
-    } else {
-        if (mask & (1 << 2)) bytes[i++] = (std::uint8_t)s[size - 1];
-        if (mask & (1 << 3)) bytes[i++] = (std::uint8_t)s[size - 2];
-    }
-
-    if (mask & (1 << 4)) bytes[i++] = (std::uint8_t)size;
-
     if (std::popcount(mask) == 4) {
-        hasher.bytes_4(bytes.data());
+        std::uint32_t dword = 0;
+        int i = 0;
+
+        if ((mask & (3 << 0)) == (3 << 0)) {
+            // Copy two bytes at once:
+            //std::uint32_t w = s[0] | (s[1] << 8);
+            std::uint16_t w;
+            // FIXME(strager): This is endian-dependent, but it makes GCC
+            // generate the code we want.
+            std::memcpy(&w, s, 2);
+            dword |= w;
+            i += 2;
+        } else {
+            if (mask & (1 << 0)) { dword = (std::uint8_t)s[0]; i += 1; }
+            if (mask & (1 << 1)) { dword |= (std::uint32_t)(std::uint8_t)s[1] << (i * 8); i += 1; }
+        }
+
+        if ((mask & (3 << 2)) == (3 << 2)) {
+            // Copy two bytes at once:
+            //std::uint32_t w = s[size-2] | (s[size-1] << 8);
+            std::uint16_t w;
+            // FIXME(strager): This is endian-dependent, but it makes GCC
+            // generate the code we want.
+            std::memcpy(&w, &s[size-2], 2);
+            dword |= w << (i * 8);
+            i += 2;
+        } else {
+            if (mask & (1 << 2)) { dword |= (std::uint32_t)(std::uint8_t)s[size - 1] << (i * 8); i += 1; }
+            if (mask & (1 << 3)) { dword |= (std::uint32_t)(std::uint8_t)s[size - 2] << (i * 8); i += 1; }
+        }
+
+        if (mask & (1 << 4)) { dword |= (std::uint32_t)(std::uint8_t)size << (i * 8); i += 1; }
+
+        assert(i == 4);
+
+        hasher.dword(dword);
     } else {
+        std::array<std::uint8_t, 5> bytes;
+        int i = 0;
+
+        if ((mask & (3 << 0)) == (3 << 0)) {
+            // Copy two bytes at once:
+            std::memcpy(&bytes[i], s, 2);
+            i += 2;
+        } else {
+            if (mask & (1 << 0)) bytes[i++] = (std::uint8_t)s[0];
+            if (mask & (1 << 1)) bytes[i++] = (std::uint8_t)s[1];
+        }
+
+        if ((mask & (3 << 2)) == (3 << 2)) {
+            // Copy two bytes at once:
+            std::memcpy(&bytes[i], &s[size-2], 2);
+            i += 2;
+        } else {
+            if (mask & (1 << 2)) bytes[i++] = (std::uint8_t)s[size - 1];
+            if (mask & (1 << 3)) bytes[i++] = (std::uint8_t)s[size - 2];
+        }
+
+        if (mask & (1 << 4)) bytes[i++] = (std::uint8_t)size;
+
         hasher.bytes(bytes.data(), bytes.size());
     }
 }

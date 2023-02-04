@@ -33,6 +33,17 @@ class fnv1a32 {
         this->byte(bytes[3]);
     }
 
+    [[gnu::always_inline]]
+    void dword(std::uint32_t dword) noexcept {
+        std::uint8_t bytes[] = {
+            std::uint8_t(dword >> 0),
+            std::uint8_t(dword >> 8),
+            std::uint8_t(dword >> 16),
+            std::uint8_t(dword >> 24),
+        };
+        this->bytes_4(bytes);
+    }
+
     std::uint32_t hash() const noexcept { return this->hash_; }
 
     private:
