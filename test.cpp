@@ -132,11 +132,14 @@ void test_look_up_identifier(const char* name, look_up_identifier_f* look_up_ide
 }
 }
 
-int main() {
+int main(int argc, char** argv) {
+    const char* filter = argc > 1 ? argv[1] : nullptr;
     std::array<pht::implementation, pht::implementation_count> implementations
         = pht::load_implementations();
     for (pht::implementation impl : implementations) {
-        pht::test_look_up_identifier(impl.name, impl.look_up_identifier);
+        if (filter == nullptr || std::strstr(impl.name, filter) != nullptr) {
+            pht::test_look_up_identifier(impl.name, impl.look_up_identifier);
+        }
     }
     return 0;
 }
