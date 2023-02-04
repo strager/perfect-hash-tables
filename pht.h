@@ -9,8 +9,9 @@
 #include <bit>
 #include <cstddef>
 #include <cstdint>
-#include <xxhash.h>
+#include <cstring>
 #include <nmmintrin.h>
+#include <xxhash.h>
 
 namespace pht {
 // if (1<<0) is set: s[0]
@@ -102,11 +103,27 @@ template <class Hasher>
 inline void hash_selected_characters(character_selection_mask mask, Hasher& hasher, const char* s, std::size_t size) noexcept {
     std::array<std::uint8_t, 5> bytes;
     int i = 0;
-    if (mask & (1 << 0)) bytes[i++] = (std::uint8_t)s[0];
-    if (mask & (1 << 1)) bytes[i++] = (std::uint8_t)s[1];
-    if (mask & (1 << 2)) bytes[i++] = (std::uint8_t)s[size - 1];
-    if (mask & (1 << 3)) bytes[i++] = (std::uint8_t)s[size - 2];
+
+    if ((mask & (3 << 0)) == (3 << 0)) {
+        // Copy two bytes at once:
+        std::memcpy(&bytes[i], s, 2);
+        i += 2;
+    } else {
+        if (mask & (1 << 0)) bytes[i++] = (std::uint8_t)s[0];
+        if (mask & (1 << 1)) bytes[i++] = (std::uint8_t)s[1];
+    }
+
+    if ((mask & (3 << 2)) == (3 << 2)) {
+        // Copy two bytes at once:
+        std::memcpy(&bytes[i], &s[size-2], 2);
+        i += 2;
+    } else {
+        if (mask & (1 << 2)) bytes[i++] = (std::uint8_t)s[size - 1];
+        if (mask & (1 << 3)) bytes[i++] = (std::uint8_t)s[size - 2];
+    }
+
     if (mask & (1 << 4)) bytes[i++] = (std::uint8_t)size;
+
     if (std::popcount(mask) == 4) {
         hasher.bytes_4(bytes.data());
     } else {
