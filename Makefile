@@ -36,7 +36,15 @@ pht_combinations = \
 	pot-15-fnv1a32 \
 	pot-23-fnv1a32 \
 	pot-27-fnv1a32 \
-	pot-29-fnv1a32
+	pot-29-fnv1a32 \
+	small-15-icrc32 \
+	small-23-icrc32 \
+	small-27-icrc32 \
+	small-29-icrc32 \
+	pot-15-icrc32 \
+	pot-23-icrc32 \
+	pot-27-icrc32 \
+	pot-29-icrc32
 
 pht_sos = $(foreach flags,$(pht_combinations),build/pht-$(flags).so)
 pht_cpps = $(foreach flags,$(pht_combinations),generated/pht-$(flags).cpp)

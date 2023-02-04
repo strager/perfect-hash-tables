@@ -25,6 +25,7 @@ enum class table_size_strategy {
 enum class hash_strategy {
     fnv1a32,
     xx3_64,
+    intel_crc32,
 };
 
 struct table_strategy {
@@ -80,6 +81,8 @@ bool try_add_all_entries(perfect_hash_table& table, hash_strategy hasher) {
             return try_add_all_entries<fnv1a32>(table);
         case hash_strategy::xx3_64:
             return try_add_all_entries<xx3_64_hasher>(table);
+        case hash_strategy::intel_crc32:
+            return try_add_all_entries<intel_crc32_hasher>(table);
     }
     __builtin_unreachable();
 }
@@ -142,7 +145,7 @@ perfect_hash_table make_perfect_hash_table(const keyword_statistics& stats, tabl
     table.character_selection = strategy.character_selection;
     table.hasher = strategy.hasher;
 
-    unsigned long max_table_size = std::size(keyword_tokens) * 15;
+    unsigned long max_table_size = std::size(keyword_tokens) * 65536;
     switch (strategy.size_strategy) {
         case table_size_strategy::smallest:
             table.table_size = std::size(keyword_tokens);
@@ -229,6 +232,7 @@ constexpr table_entry table[table_size] = {
     switch (table.hasher) {
         case hash_strategy::xx3_64: hasher_class = "xx3_64_hasher"; break;
         case hash_strategy::fnv1a32: hasher_class = "fnv1a32"; break;
+        case hash_strategy::intel_crc32: hasher_class = "intel_crc32_hasher"; break;
     }
     std::fprintf(file, R"(
 };
@@ -263,11 +267,12 @@ void go() {
     keyword_statistics stats = make_stats();
 
     std::vector<std::thread> threads;
-    for (hash_strategy hasher : {hash_strategy::fnv1a32, hash_strategy::xx3_64}) {
+    for (hash_strategy hasher : {hash_strategy::fnv1a32, hash_strategy::xx3_64, hash_strategy::intel_crc32}) {
         std::string hasher_tag;
         switch (hasher) {
             case hash_strategy::fnv1a32: hasher_tag = "fnv1a32"; break;
             case hash_strategy::xx3_64: hasher_tag = "xx364"; break;
+            case hash_strategy::intel_crc32: hasher_tag = "icrc32"; break;
         }
         for (character_selection_mask character_selection : stats.unique_character_selections) {
             if (std::popcount(character_selection) == 5) {
