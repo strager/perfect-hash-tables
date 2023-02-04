@@ -10,6 +10,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <xxhash.h>
+#include <nmmintrin.h>
 
 namespace pht {
 // if (1<<0) is set: s[0]
@@ -50,13 +51,34 @@ class intel_crc32_hasher {
     void bytes(const std::uint8_t* bytes, std::size_t length) noexcept {
         // https://stackoverflow.com/a/29174491
         constexpr std::uint32_t poly = 0x82f63b78;
-        this->hash_ = ~this->hash_;
         for (std::size_t i = 0; i < length; ++i) {
             this->hash_ ^= bytes[i];
             for (int k = 0; k < 8; k++)
                 this->hash_ = this->hash_ & 1 ? (this->hash_ >> 1) ^ poly : this->hash_ >> 1;
         }
-        this->hash_ = ~this->hash_;
+    }
+
+    [[gnu::always_inline]]
+    void bytes_4(const std::uint8_t* bytes) noexcept {
+        this->bytes(bytes, 4);
+    }
+
+    std::uint32_t hash() const noexcept { return this->hash_; }
+
+  private:
+    std::uint32_t hash_;
+};
+
+class intel_crc32_intrinsic_hasher {
+  public:
+    [[gnu::always_inline]]
+    explicit intel_crc32_intrinsic_hasher(std::uint32_t basis) noexcept : hash_(basis) {}
+
+    [[gnu::always_inline]]
+    void bytes(const std::uint8_t* bytes, std::size_t length) noexcept {
+        for (std::size_t i = 0; i < length; ++i) {
+            this->hash_ = ::_mm_crc32_u8(this->hash_, bytes[i]);
+        }
     }
 
     [[gnu::always_inline]]

@@ -232,7 +232,7 @@ constexpr table_entry table[table_size] = {
     switch (table.hasher) {
         case hash_strategy::xx3_64: hasher_class = "xx3_64_hasher"; break;
         case hash_strategy::fnv1a32: hasher_class = "fnv1a32"; break;
-        case hash_strategy::intel_crc32: hasher_class = "intel_crc32_hasher"; break;
+        case hash_strategy::intel_crc32: hasher_class = "intel_crc32_intrinsic_hasher"; break;
     }
     std::fprintf(file, R"(
 };

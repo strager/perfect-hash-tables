@@ -2,7 +2,8 @@ SHELL = bash
 
 extra_test_LDFLAGS = -Wl,--undefined=look_up_identifier
 extra_CXXFLAGS = -std=c++20 -g -O3 -fvisibility=hidden -fPIC \
-	-I ~/tmp/Projects/xxhash/ -DXXH_INLINE_ALL
+	-I ~/tmp/Projects/xxhash/ -DXXH_INLINE_ALL \
+	-msse4
 
 gperf_combinations = \
 	_ \
