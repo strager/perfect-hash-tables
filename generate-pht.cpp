@@ -14,8 +14,8 @@
 namespace pht {
 namespace {
 enum class table_size_strategy {
-    five_x,
-    five_x_next_power_of_2,
+    smallest,
+    power_of_2,
 };
 
 struct table_strategy {
@@ -74,14 +74,6 @@ int try_build_table(perfect_hash_table& table, int max_attempts) {
 
 perfect_hash_table make_perfect_hash_table(table_strategy strategy) {
     perfect_hash_table table;
-    switch (strategy.size_strategy) {
-        case table_size_strategy::five_x:
-            table.table_size = std::size(keyword_tokens) * 5;
-            break;
-        case table_size_strategy::five_x_next_power_of_2:
-            table.table_size = std::bit_ceil(std::size(keyword_tokens) * 5);
-            break;
-    }
 
     table.min_keyword_size = 0xffffffff;
     table.max_keyword_size = 0;
@@ -91,24 +83,44 @@ perfect_hash_table make_perfect_hash_table(table_strategy strategy) {
         table.max_keyword_size = std::max(table.max_keyword_size, size);
     }
 
-
-    int max_attempts = 1'000'000;
-    int attempts = try_build_table(table, max_attempts);
-    if (attempts >= max_attempts) {
-        std::fprintf(
-            stderr,
-            "can't generate table of size %lu from %zu items after %d attempts\n",
-            table.table_size,
-            std::size(keyword_tokens),
-            attempts);
-        std::exit(1);
+    unsigned long max_table_size = std::size(keyword_tokens) * 10;
+    switch (strategy.size_strategy) {
+        case table_size_strategy::smallest:
+            table.table_size = std::size(keyword_tokens);
+            break;
+        case table_size_strategy::power_of_2:
+            table.table_size = std::bit_ceil(std::size(keyword_tokens));
+            break;
     }
-    std::fprintf(
-        stderr,
-        "took %d attempts to generate table of size %lu from %zu items\n",
-        attempts,
-        table.table_size,
-        std::size(keyword_tokens));
+    for (;;) {
+        if (table.table_size > max_table_size) {
+            std::fprintf(
+                stderr,
+                "can't generate table of size %lu from %zu items\n",
+                table.table_size,
+                std::size(keyword_tokens));
+            std::exit(1);
+        }
+        int max_attempts_per_size = 50'000;
+        int attempts = try_build_table(table, max_attempts_per_size);
+        if (attempts < max_attempts_per_size) {
+            std::fprintf(
+                stderr,
+                "took %d attempts to generate table of size %lu from %zu items\n",
+                attempts,
+                table.table_size,
+                std::size(keyword_tokens));
+            break;
+        }
+        switch (strategy.size_strategy) {
+            case table_size_strategy::smallest:
+                table.table_size += 1;
+                break;
+            case table_size_strategy::power_of_2:
+                table.table_size *= 2;
+                break;
+        }
+    }
 
     return table;
 }
@@ -178,11 +190,11 @@ token_type look_up_identifier(const char* identifier, std::size_t size) noexcept
 }
 
 void go() {
-    write_table("generated/pht-5x.cpp", make_perfect_hash_table(table_strategy{
-        .size_strategy = table_size_strategy::five_x,
+    write_table("generated/pht-small.cpp", make_perfect_hash_table(table_strategy{
+        .size_strategy = table_size_strategy::smallest,
     }));
-    write_table("generated/pht-5xnpot.cpp", make_perfect_hash_table(table_strategy{
-        .size_strategy = table_size_strategy::five_x_next_power_of_2,
+    write_table("generated/pht-pot.cpp", make_perfect_hash_table(table_strategy{
+        .size_strategy = table_size_strategy::power_of_2,
     }));
 }
 }

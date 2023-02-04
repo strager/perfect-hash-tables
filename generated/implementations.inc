@@ -8,6 +8,6 @@
 "./build/gperf--pic_--seven-bit.so",
 "./build/gperf--compare-lengths_--readonly-tables.so",
 "./build/gperf--compare-lengths_--seven-bit.so",
-"./build/pht-5x.so",
-"./build/pht-5xnpot.so",
+"./build/pht-small.so",
+"./build/pht-pot.so",
 "./build/std-unordered-map.so",
