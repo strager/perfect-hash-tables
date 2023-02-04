@@ -93,8 +93,12 @@ build/pht-$(flags).so: generated/pht-$(flags).cpp token.h pht.h fnv.h Makefile b
 endef
 $(foreach flags,$(pht_combinations),$(eval $(call make_pht_so)))
 
-$(pht_cpps): build/generate-pht Makefile generated/stamp
+# We use one command to generate multiple .cpp files. Use a stamp file and
+# order-only dependencies to trick Make into only running the command once.
+build/pht-cpps-stamp: build/generate-pht Makefile generated/stamp
 	./build/generate-pht
+	touch $(@)
+$(pht_cpps): | build/pht-cpps-stamp
 
 define make_gperf_so
 build/gperf$(flags).so: generated/gperf$(flags).cpp token.h Makefile build/stamp
