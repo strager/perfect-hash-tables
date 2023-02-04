@@ -21,9 +21,15 @@ enum class table_size_strategy {
     power_of_2,
 };
 
+enum class hash_strategy {
+    fnv1a32,
+    xx3_64,
+};
+
 struct table_strategy {
     table_size_strategy size_strategy;
     character_selection_mask character_selection;
+    hash_strategy hasher;
 };
 
 struct keyword_statistics {
@@ -40,11 +46,13 @@ struct perfect_hash_table {
     keyword_statistics stats;
     unsigned long hash_basis;
     character_selection_mask character_selection;
+    hash_strategy hasher;
     unsigned long table_size;
 
     std::vector<table_entry> entries;
 };
 
+template <class Hasher>
 bool try_add_all_entries(perfect_hash_table& table) {
     table.entries.resize(table.table_size);
     for (perfect_hash_table::table_entry& entry : table.entries) {
@@ -52,7 +60,7 @@ bool try_add_all_entries(perfect_hash_table& table) {
     }
 
     for (keyword_token kt : keyword_tokens) {
-        fnv1a32 hasher(table.hash_basis);
+        Hasher hasher(table.hash_basis);
         hash_selected_characters(table.character_selection, hasher, kt.keyword, std::strlen(kt.keyword));
         std::uint32_t index = hasher.hash() % table.table_size;
         bool taken = table.entries[index].keyword != nullptr;
@@ -65,6 +73,16 @@ bool try_add_all_entries(perfect_hash_table& table) {
     return true;
 }
 
+bool try_add_all_entries(perfect_hash_table& table, hash_strategy hasher) {
+    switch (hasher) {
+        case hash_strategy::fnv1a32:
+            return try_add_all_entries<fnv1a32>(table);
+        case hash_strategy::xx3_64:
+            return try_add_all_entries<xx3_64_hasher>(table);
+    }
+    __builtin_unreachable();
+}
+
 // Returns the number of attempts. If it's >= max_attempts, then building the
 // table failed.
 int try_build_table(perfect_hash_table& table, int max_attempts) {
@@ -75,7 +93,7 @@ int try_build_table(perfect_hash_table& table, int max_attempts) {
         if (attempts >= max_attempts) {
             return attempts;
         }
-        bool succeeded = try_add_all_entries(table);
+        bool succeeded = try_add_all_entries(table, table.hasher);
         if (succeeded) {
             return attempts;
         }
@@ -121,6 +139,7 @@ perfect_hash_table make_perfect_hash_table(const keyword_statistics& stats, tabl
     table.stats = stats;
 
     table.character_selection = strategy.character_selection;
+    table.hasher = strategy.hasher;
 
     unsigned long max_table_size = std::size(keyword_tokens) * 15;
     switch (strategy.size_strategy) {
@@ -205,7 +224,12 @@ constexpr table_entry table[table_size] = {
         }
     }
 
-    std::fprintf(file, "%s", R"(
+    const char* hasher_class;
+    switch (table.hasher) {
+        case hash_strategy::xx3_64: hasher_class = "xx3_64_hasher"; break;
+        case hash_strategy::fnv1a32: hasher_class = "fnv1a32"; break;
+    }
+    std::fprintf(file, R"(
 };
 }
 
@@ -214,9 +238,9 @@ token_type look_up_identifier(const char* identifier, std::size_t size) noexcept
         return token_type::identifier;
     }
 
-    fnv1a32 hasher(hash_basis);
+    %s hasher(hash_basis);
     hash_selected_characters(character_selection, hasher, identifier, size);
-    std::uint32_t index = hasher.hash() % table_size;
+    std::uint32_t index = hasher.hash() %% table_size;
 
     const table_entry& entry = table[index];
     if (std::strncmp(identifier, entry.keyword, size) == 0) {
@@ -225,7 +249,7 @@ token_type look_up_identifier(const char* identifier, std::size_t size) noexcept
     return token_type::identifier;
 }
 }
-)");
+)", hasher_class);
 
     std::fclose(file);
 }
@@ -237,20 +261,29 @@ void write_table(const std::string& file_path, const perfect_hash_table& table) 
 void go() {
     keyword_statistics stats = make_stats();
 
-    for (character_selection_mask character_selection : stats.unique_character_selections) {
-        if (std::popcount(character_selection) == 5) {
-            // Too expensive. Ignore.
-            continue;
+    for (hash_strategy hasher : {hash_strategy::fnv1a32, hash_strategy::xx3_64}) {
+        std::string hasher_tag;
+        switch (hasher) {
+            case hash_strategy::fnv1a32: hasher_tag = "fnv1a32"; break;
+            case hash_strategy::xx3_64: hasher_tag = "xx364"; break;
         }
-        std::string selection_tag = std::to_string(character_selection);
-        write_table("generated/pht-small-" + selection_tag + ".cpp", make_perfect_hash_table(stats, table_strategy{
-            .size_strategy = table_size_strategy::smallest,
-            .character_selection = character_selection,
-        }));
-        write_table("generated/pht-pot-" + selection_tag + ".cpp", make_perfect_hash_table(stats, table_strategy{
-            .size_strategy = table_size_strategy::power_of_2,
-            .character_selection = character_selection,
-        }));
+        for (character_selection_mask character_selection : stats.unique_character_selections) {
+            if (std::popcount(character_selection) == 5) {
+                // Too expensive. Ignore.
+                continue;
+            }
+            std::string selection_tag = std::to_string(character_selection);
+            write_table("generated/pht-small-" + selection_tag + "-" + hasher_tag + ".cpp", make_perfect_hash_table(stats, table_strategy{
+                .size_strategy = table_size_strategy::smallest,
+                .character_selection = character_selection,
+                .hasher = hasher,
+            }));
+            write_table("generated/pht-pot-" + selection_tag + "-" + hasher_tag + ".cpp", make_perfect_hash_table(stats, table_strategy{
+                .size_strategy = table_size_strategy::power_of_2,
+                .character_selection = character_selection,
+                .hasher = hasher,
+            }));
+        }
     }
 }
 }

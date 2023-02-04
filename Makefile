@@ -1,7 +1,8 @@
 SHELL = bash
 
 extra_test_LDFLAGS = -Wl,--undefined=look_up_identifier
-extra_CXXFLAGS = -std=c++20 -g -O3 -fvisibility=hidden -fPIC
+extra_CXXFLAGS = -std=c++20 -g -O3 -fvisibility=hidden -fPIC \
+	-I ~/tmp/Projects/xxhash/ -DXXH_INLINE_ALL
 
 gperf_combinations = \
 	_ \
@@ -20,14 +21,22 @@ gperf_cpps = $(foreach flags,$(gperf_combinations),generated/gperf$(flags).cpp)
 
 # Keep in sync with generate-pht.cpp.
 pht_combinations = \
-	small-15 \
-	small-23 \
-	small-27 \
-	small-29 \
-	pot-15 \
-	pot-23 \
-	pot-27 \
-	pot-29
+	small-15-xx364 \
+	small-23-xx364 \
+	small-27-xx364 \
+	small-29-xx364 \
+	pot-15-xx364 \
+	pot-23-xx364 \
+	pot-27-xx364 \
+	pot-29-xx364 \
+	small-15-fnv1a32 \
+	small-23-fnv1a32 \
+	small-27-fnv1a32 \
+	small-29-fnv1a32 \
+	pot-15-fnv1a32 \
+	pot-23-fnv1a32 \
+	pot-27-fnv1a32 \
+	pot-29-fnv1a32
 
 pht_sos = $(foreach flags,$(pht_combinations),build/pht-$(flags).so)
 pht_cpps = $(foreach flags,$(pht_combinations),generated/pht-$(flags).cpp)
