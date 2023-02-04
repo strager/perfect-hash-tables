@@ -12,6 +12,7 @@
 #include <cstring>
 #include <set>
 #include <string>
+#include <thread>
 #include <vector>
 
 namespace pht {
@@ -261,6 +262,7 @@ void write_table(const std::string& file_path, const perfect_hash_table& table) 
 void go() {
     keyword_statistics stats = make_stats();
 
+    std::vector<std::thread> threads;
     for (hash_strategy hasher : {hash_strategy::fnv1a32, hash_strategy::xx3_64}) {
         std::string hasher_tag;
         switch (hasher) {
@@ -273,17 +275,25 @@ void go() {
                 continue;
             }
             std::string selection_tag = std::to_string(character_selection);
-            write_table("generated/pht-small-" + selection_tag + "-" + hasher_tag + ".cpp", make_perfect_hash_table(stats, table_strategy{
-                .size_strategy = table_size_strategy::smallest,
-                .character_selection = character_selection,
-                .hasher = hasher,
-            }));
-            write_table("generated/pht-pot-" + selection_tag + "-" + hasher_tag + ".cpp", make_perfect_hash_table(stats, table_strategy{
-                .size_strategy = table_size_strategy::power_of_2,
-                .character_selection = character_selection,
-                .hasher = hasher,
-            }));
+            threads.emplace_back([=]() -> void {
+                write_table("generated/pht-small-" + selection_tag + "-" + hasher_tag + ".cpp", make_perfect_hash_table(stats, table_strategy{
+                    .size_strategy = table_size_strategy::smallest,
+                    .character_selection = character_selection,
+                    .hasher = hasher,
+                }));
+            });
+            threads.emplace_back([=]() -> void {
+                write_table("generated/pht-pot-" + selection_tag + "-" + hasher_tag + ".cpp", make_perfect_hash_table(stats, table_strategy{
+                    .size_strategy = table_size_strategy::power_of_2,
+                    .character_selection = character_selection,
+                    .hasher = hasher,
+                }));
+            });
         }
+    }
+
+    for (std::thread& t : threads) {
+        t.join();
     }
 }
 }
