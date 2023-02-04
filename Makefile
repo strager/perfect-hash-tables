@@ -38,6 +38,14 @@ pht_combinations = \
 	pot-23-fnv1a32 \
 	pot-27-fnv1a32 \
 	pot-29-fnv1a32 \
+	small-15-lehmer \
+	small-23-lehmer \
+	small-27-lehmer \
+	small-29-lehmer \
+	pot-15-lehmer \
+	pot-23-lehmer \
+	pot-27-lehmer \
+	pot-29-lehmer \
 	small-15-icrc32 \
 	small-23-icrc32 \
 	small-27-icrc32 \

@@ -26,6 +26,7 @@ enum class hash_strategy {
     fnv1a32,
     xx3_64,
     intel_crc32,
+    lehmer,
 };
 
 struct table_strategy {
@@ -83,6 +84,8 @@ bool try_add_all_entries(perfect_hash_table& table, hash_strategy hasher) {
             return try_add_all_entries<xx3_64_hasher>(table);
         case hash_strategy::intel_crc32:
             return try_add_all_entries<intel_crc32_hasher>(table);
+        case hash_strategy::lehmer:
+            return try_add_all_entries<lehmer_hasher>(table);
     }
     __builtin_unreachable();
 }
@@ -233,6 +236,7 @@ constexpr table_entry table[table_size] = {
         case hash_strategy::xx3_64: hasher_class = "xx3_64_hasher"; break;
         case hash_strategy::fnv1a32: hasher_class = "fnv1a32"; break;
         case hash_strategy::intel_crc32: hasher_class = "intel_crc32_intrinsic_hasher"; break;
+        case hash_strategy::lehmer: hasher_class = "lehmer_hasher"; break;
     }
     std::fprintf(file, R"(
 };
@@ -267,12 +271,13 @@ void go() {
     keyword_statistics stats = make_stats();
 
     std::vector<std::thread> threads;
-    for (hash_strategy hasher : {hash_strategy::fnv1a32, hash_strategy::xx3_64, hash_strategy::intel_crc32}) {
+    for (hash_strategy hasher : {hash_strategy::fnv1a32, hash_strategy::xx3_64, hash_strategy::intel_crc32, hash_strategy::lehmer}) {
         std::string hasher_tag;
         switch (hasher) {
             case hash_strategy::fnv1a32: hasher_tag = "fnv1a32"; break;
             case hash_strategy::xx3_64: hasher_tag = "xx364"; break;
             case hash_strategy::intel_crc32: hasher_tag = "icrc32"; break;
+            case hash_strategy::lehmer: hasher_tag = "lehmer"; break;
         }
         for (character_selection_mask character_selection : stats.unique_character_selections) {
             if (std::popcount(character_selection) == 5) {

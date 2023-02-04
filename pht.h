@@ -98,6 +98,41 @@ class intel_crc32_intrinsic_hasher {
     std::uint32_t hash_;
 };
 
+// https://en.wikipedia.org/wiki/Lehmer_random_number_generator
+class lehmer_hasher {
+  public:
+    [[gnu::always_inline]]
+    explicit lehmer_hasher(std::uint32_t basis) noexcept : hash_(basis) {}
+
+    void bytes(const std::uint8_t* bytes, std::size_t size) noexcept {
+        std::abort();
+    }
+
+    [[gnu::always_inline]]
+    void bytes_4(const std::uint8_t* bytes) noexcept {
+        std::uint32_t dword =
+            std::uint32_t(bytes[0]) << 0 |
+            std::uint32_t(bytes[1]) << 8 |
+            std::uint32_t(bytes[2]) << 16 |
+            std::uint32_t(bytes[3]) << 24;
+        this->hash_ = mix(dword ^ this->hash_);
+    }
+
+    std::uint32_t hash() const noexcept { return this->hash_; }
+
+  private:
+    std::uint32_t hash_;
+
+    static std::uint32_t mix(std::uint32_t seed) {
+        std::uint64_t tmp;
+        tmp = (std::uint64_t)seed * 0x4a39b70d;
+        std::uint32_t m1 = (std::uint32_t)((tmp >> 32) ^ tmp);
+        tmp = (std::uint64_t)m1 * 0x12fad5c9;
+        std::uint32_t m2 = (std::uint32_t)((tmp >> 32) ^ tmp);
+        return m2;
+    }
+};
+
 template <class Hasher>
 [[gnu::always_inline]]
 inline void hash_selected_characters(character_selection_mask mask, Hasher& hasher, const char* s, std::size_t size) noexcept {
