@@ -9,14 +9,21 @@
 #include <cstdint>
 
 namespace pht {
+// if (1<<0) is set: s[0]
+// if (1<<1) is set: s[1]
+// if (1<<2) is set: s[size-1]
+// if (1<<3) is set: s[size-2]
+// if (1<<4) is set: size
+using character_selection_mask = std::uint8_t;
+
 [[gnu::always_inline]]
-inline std::uint32_t hash(std::uint32_t hash_basis, const char* s, std::size_t size) noexcept {
+inline std::uint32_t hash(character_selection_mask mask, std::uint32_t hash_basis, const char* s, std::size_t size) noexcept {
     std::uint32_t h = hash_basis;
-    // TODO(strager): Play with different character selection schemes.
-    fnv1a32_byte(&h, (std::uint8_t)s[0]);
-    fnv1a32_byte(&h, (std::uint8_t)s[1]);
-    fnv1a32_byte(&h, (std::uint8_t)s[size - 2]);
-    fnv1a32_byte(&h, (std::uint8_t)s[size - 1]);
+    if (mask & (1 << 0)) fnv1a32_byte(&h, (std::uint8_t)s[0]);
+    if (mask & (1 << 1)) fnv1a32_byte(&h, (std::uint8_t)s[1]);
+    if (mask & (1 << 2)) fnv1a32_byte(&h, (std::uint8_t)s[size - 1]);
+    if (mask & (1 << 3)) fnv1a32_byte(&h, (std::uint8_t)s[size - 2]);
+    if (mask & (1 << 4)) fnv1a32_byte(&h, (std::uint8_t)size);
     return h;
 }
 }

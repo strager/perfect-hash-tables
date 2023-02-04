@@ -5,10 +5,13 @@
 #include "token.h"
 #include <algorithm>
 #include <bit>
+#include <cassert>
 #include <cerrno>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <set>
+#include <string>
 #include <vector>
 
 namespace pht {
@@ -20,11 +23,13 @@ enum class table_size_strategy {
 
 struct table_strategy {
     table_size_strategy size_strategy;
+    character_selection_mask character_selection;
 };
 
 struct keyword_statistics {
     unsigned long min_keyword_size;
     unsigned long max_keyword_size;
+    std::vector<character_selection_mask> unique_character_selections;
 };
 
 struct perfect_hash_table {
@@ -34,6 +39,7 @@ struct perfect_hash_table {
 
     keyword_statistics stats;
     unsigned long hash_basis;
+    character_selection_mask character_selection;
     unsigned long table_size;
 
     std::vector<table_entry> entries;
@@ -46,7 +52,7 @@ bool try_add_all_entries(perfect_hash_table& table) {
     }
 
     for (keyword_token kt : keyword_tokens) {
-        std::uint32_t h = hash(table.hash_basis, kt.keyword, std::strlen(kt.keyword));
+        std::uint32_t h = hash(table.character_selection, table.hash_basis, kt.keyword, std::strlen(kt.keyword));
         std::uint32_t index = h % table.table_size;
         bool taken = table.entries[index].keyword != nullptr;
         if (taken) {
@@ -85,6 +91,27 @@ keyword_statistics make_stats() {
         stats.min_keyword_size = std::min(stats.min_keyword_size, size);
         stats.max_keyword_size = std::max(stats.max_keyword_size, size);
     }
+
+    for (character_selection_mask m = 1; m < (1<<5); ++m) {
+        std::set<std::string> selections;
+        for (keyword_token kt : keyword_tokens) {
+            std::string selection;
+            std::size_t size = std::strlen(kt.keyword);
+            if (m & (1 << 0)) selection += kt.keyword[0];
+            if (m & (1 << 1)) selection += kt.keyword[1];
+            if (m & (1 << 2)) selection += kt.keyword[size-1];
+            if (m & (1 << 3)) selection += kt.keyword[size-2];
+            if (m & (1 << 4)) selection += size;
+            assert(!selection.empty());
+            if (selections.count(selection) > 0) {
+                // Selection is not unique. Skip.
+                goto next_character_selection;
+            }
+            selections.insert(selection);
+        }
+        stats.unique_character_selections.push_back(m);
+next_character_selection:;
+    }
     return stats;
 }
 
@@ -92,7 +119,9 @@ perfect_hash_table make_perfect_hash_table(const keyword_statistics& stats, tabl
     perfect_hash_table table;
     table.stats = stats;
 
-    unsigned long max_table_size = std::size(keyword_tokens) * 10;
+    table.character_selection = strategy.character_selection;
+
+    unsigned long max_table_size = std::size(keyword_tokens) * 15;
     switch (strategy.size_strategy) {
         case table_size_strategy::smallest:
             table.table_size = std::size(keyword_tokens);
@@ -150,12 +179,13 @@ void write_table(const char* file_path, const perfect_hash_table& table) {
 
 namespace pht {
 namespace {
+constexpr character_selection_mask character_selection = %uU;
 constexpr std::uint32_t hash_basis = %luUL;
 constexpr std::uint32_t table_size = %luUL;
 constexpr std::size_t min_keyword_size = %lu;
 constexpr std::size_t max_keyword_size = %lu;
 
-)", table.hash_basis, table.table_size, table.stats.min_keyword_size, table.stats.max_keyword_size);
+)", table.character_selection, table.hash_basis, table.table_size, table.stats.min_keyword_size, table.stats.max_keyword_size);
 
     std::fprintf(file, "%s", R"(
 struct table_entry {
@@ -183,7 +213,7 @@ token_type look_up_identifier(const char* identifier, std::size_t size) noexcept
         return token_type::identifier;
     }
 
-    std::uint32_t h = hash(hash_basis, identifier, size);
+    std::uint32_t h = hash(character_selection, hash_basis, identifier, size);
     std::uint32_t index = h % table_size;
 
     const table_entry& entry = table[index];
@@ -198,14 +228,24 @@ token_type look_up_identifier(const char* identifier, std::size_t size) noexcept
     std::fclose(file);
 }
 
+void write_table(const std::string& file_path, const perfect_hash_table& table) {
+    write_table(file_path.c_str(), table);
+}
+
 void go() {
     keyword_statistics stats = make_stats();
-    write_table("generated/pht-small.cpp", make_perfect_hash_table(stats, table_strategy{
-        .size_strategy = table_size_strategy::smallest,
-    }));
-    write_table("generated/pht-pot.cpp", make_perfect_hash_table(stats, table_strategy{
-        .size_strategy = table_size_strategy::power_of_2,
-    }));
+
+    for (character_selection_mask character_selection : stats.unique_character_selections) {
+        std::string selection_tag = std::to_string(character_selection);
+        write_table("generated/pht-small-" + selection_tag + ".cpp", make_perfect_hash_table(stats, table_strategy{
+            .size_strategy = table_size_strategy::smallest,
+            .character_selection = character_selection,
+        }));
+        write_table("generated/pht-pot-" + selection_tag + ".cpp", make_perfect_hash_table(stats, table_strategy{
+            .size_strategy = table_size_strategy::power_of_2,
+            .character_selection = character_selection,
+        }));
+    }
 }
 }
 }

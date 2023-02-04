@@ -20,8 +20,16 @@ gperf_cpps = $(foreach flags,$(gperf_combinations),generated/gperf$(flags).cpp)
 
 # Keep in sync with generate-pht.cpp.
 pht_combinations = \
-	small \
-	pot
+	small-15 \
+	small-23 \
+	small-27 \
+	small-29 \
+	small-31 \
+	pot-15 \
+	pot-23 \
+	pot-27 \
+	pot-29 \
+	pot-31
 
 pht_sos = $(foreach flags,$(pht_combinations),build/pht-$(flags).so)
 pht_cpps = $(foreach flags,$(pht_combinations),generated/pht-$(flags).cpp)
