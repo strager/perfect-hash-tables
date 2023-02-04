@@ -37,7 +37,7 @@ custom_cpps = $(foreach name,$(custom_combinations),$(name).cpp)
 sos = $(gperf_sos) $(pht_sos) $(custom_sos)
 
 .PHONY: all
-all: check build/benchmark keywords.txt non-keywords.txt mixed.txt
+all: check build/benchmark build/benchmark-lite keywords.txt non-keywords.txt mixed.txt
 
 .PHONY: bench
 bench: build/benchmark keywords.txt non-keywords.txt mixed.txt
@@ -60,6 +60,9 @@ build/test: $(sos) test.cpp token.h implementations.h generated/implementations.
 
 build/benchmark: $(sos) benchmark.cpp token.h implementations.h generated/implementations.inc Makefile build/stamp
 	$(CXX) -fno-lto $(extra_CXXFLAGS) $(CXXFLAGS) $(LDFLAGS) -o $(@) benchmark.cpp -lbenchmark
+
+build/benchmark-lite: benchmark-lite.cpp token.h implementations.h generated/implementations.inc Makefile build/stamp
+	$(CXX) $(extra_CXXFLAGS) $(CXXFLAGS) $(LDFLAGS) -o $(@) benchmark-lite.cpp -lbenchmark
 
 build/map-to-tokens: build/gperf_.so map-to-tokens.cpp file.h lex.h token.h Makefile build/stamp
 	$(CXX) $(extra_CXXFLAGS) $(CXXFLAGS) $(LDFLAGS) -o $(@) map-to-tokens.cpp build/gperf_.so
