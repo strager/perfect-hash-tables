@@ -1,0 +1,26 @@
+## gperf (stock) vs gperf --compare-lengths
+
+It looks like the extra length compare is harder to predict on my 5950X:
+commit c2234da296f64226ca20ab30a2d09e785ac26375:
+
+    $ perf stat ./build/benchmark-lite ./build/gperf_.so
+    2,478,423,899      branches                  #    1.317 G/sec                    (83.42%)
+      153,247,153      branch-misses             #    6.18% of all branches          (83.32%)
+
+    $ perf stat ./build/benchmark-lite ./build/gperf--compare-lengths.so
+    2,501,667,618      branches                  #    1.076 G/sec                    (83.35%)
+      230,131,503      branch-misses             #    9.20% of all branches          (83.39%)
+
+## gperf (stock) vs gperf --pic
+
+It looks like o>=0 check is harder to predict on my 5950X (but less difficult
+than the length check):
+commit c2234da296f64226ca20ab30a2d09e785ac26375:
+
+    $ perf stat ./build/benchmark-lite ./build/gperf_.so
+    2,478,423,899      branches                  #    1.317 G/sec                    (83.42%)
+      153,247,153      branch-misses             #    6.18% of all branches          (83.32%)
+
+    $ perf stat ./build/benchmark-lite ./build/gperf--pic.so
+    2,693,627,001      branches                  #    1.081 G/sec                    (83.38%)
+      237,105,877      branch-misses             #    8.80% of all branches          (83.38%)
