@@ -22,15 +22,19 @@ struct table_strategy {
     table_size_strategy size_strategy;
 };
 
+struct keyword_statistics {
+    unsigned long min_keyword_size;
+    unsigned long max_keyword_size;
+};
+
 struct perfect_hash_table {
     struct table_entry {
         const char* keyword = nullptr;
     };
 
+    keyword_statistics stats;
     unsigned long hash_basis;
     unsigned long table_size;
-    unsigned long min_keyword_size;
-    unsigned long max_keyword_size;
 
     std::vector<table_entry> entries;
 };
@@ -72,16 +76,21 @@ int try_build_table(perfect_hash_table& table, int max_attempts) {
     }
 }
 
-perfect_hash_table make_perfect_hash_table(table_strategy strategy) {
-    perfect_hash_table table;
-
-    table.min_keyword_size = 0xffffffff;
-    table.max_keyword_size = 0;
+keyword_statistics make_stats() {
+    keyword_statistics stats;
+    stats.min_keyword_size = 0xffffffff;
+    stats.max_keyword_size = 0;
     for (keyword_token kt : keyword_tokens) {
         unsigned long size = std::strlen(kt.keyword);
-        table.min_keyword_size = std::min(table.min_keyword_size, size);
-        table.max_keyword_size = std::max(table.max_keyword_size, size);
+        stats.min_keyword_size = std::min(stats.min_keyword_size, size);
+        stats.max_keyword_size = std::max(stats.max_keyword_size, size);
     }
+    return stats;
+}
+
+perfect_hash_table make_perfect_hash_table(table_strategy strategy) {
+    perfect_hash_table table;
+    table.stats = make_stats();
 
     unsigned long max_table_size = std::size(keyword_tokens) * 10;
     switch (strategy.size_strategy) {
@@ -146,7 +155,7 @@ constexpr std::uint32_t table_size = %luUL;
 constexpr std::size_t min_keyword_size = %lu;
 constexpr std::size_t max_keyword_size = %lu;
 
-)", table.hash_basis, table.table_size, table.min_keyword_size, table.max_keyword_size);
+)", table.hash_basis, table.table_size, table.stats.min_keyword_size, table.stats.max_keyword_size);
 
     std::fprintf(file, "%s", R"(
 struct table_entry {
