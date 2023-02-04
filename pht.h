@@ -18,13 +18,13 @@ using character_selection_mask = std::uint8_t;
 
 [[gnu::always_inline]]
 inline std::uint32_t hash(character_selection_mask mask, std::uint32_t hash_basis, const char* s, std::size_t size) noexcept {
-    std::uint32_t h = hash_basis;
-    if (mask & (1 << 0)) fnv1a32_byte(&h, (std::uint8_t)s[0]);
-    if (mask & (1 << 1)) fnv1a32_byte(&h, (std::uint8_t)s[1]);
-    if (mask & (1 << 2)) fnv1a32_byte(&h, (std::uint8_t)s[size - 1]);
-    if (mask & (1 << 3)) fnv1a32_byte(&h, (std::uint8_t)s[size - 2]);
-    if (mask & (1 << 4)) fnv1a32_byte(&h, (std::uint8_t)size);
-    return h;
+    fnv1a32 hasher(hash_basis);
+    if (mask & (1 << 0)) hasher.byte((std::uint8_t)s[0]);
+    if (mask & (1 << 1)) hasher.byte((std::uint8_t)s[1]);
+    if (mask & (1 << 2)) hasher.byte((std::uint8_t)s[size - 1]);
+    if (mask & (1 << 3)) hasher.byte((std::uint8_t)s[size - 2]);
+    if (mask & (1 << 4)) hasher.byte((std::uint8_t)size);
+    return hasher.hash();
 }
 }
 

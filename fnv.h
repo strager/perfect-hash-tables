@@ -7,11 +7,22 @@
 #include <cstdint>
 
 namespace pht {
-[[gnu::always_inline]]
-inline void fnv1a32_byte(std::uint32_t* hash, std::uint8_t byte) noexcept {
-    *hash = *hash ^ byte;
-    *hash = *hash * 0x01000193;
-}
+class fnv1a32 {
+    public:
+    [[gnu::always_inline]]
+    explicit fnv1a32(std::uint32_t basis) noexcept : hash_(basis) {}
+
+    [[gnu::always_inline]]
+    void byte(std::uint8_t byte) noexcept {
+        this->hash_ = this->hash_ ^ byte;
+        this->hash_ = this->hash_ * 0x01000193;
+    }
+
+    std::uint32_t hash() const noexcept { return this->hash_; }
+
+    private:
+    std::uint32_t hash_;
+};
 }
 
 #endif
