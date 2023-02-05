@@ -38,6 +38,7 @@ struct table_strategy {
     table_size_strategy size_strategy;
     character_selection_mask character_selection;
     hash_strategy hasher;
+    bool inline_hash;
 };
 
 struct keyword_statistics {
@@ -49,6 +50,7 @@ struct keyword_statistics {
 struct perfect_hash_table {
     struct table_entry {
         const char* keyword = nullptr;
+        std::uint32_t hash = 0;
     };
 
     keyword_statistics stats;
@@ -56,26 +58,28 @@ struct perfect_hash_table {
     character_selection_mask character_selection;
     hash_strategy hasher;
     unsigned long table_size;
+    bool inline_hash;
 
     std::vector<table_entry> entries;
 };
 
 template <class Hasher>
 bool try_add_all_entries(perfect_hash_table& table) {
+    table.entries.clear();
     table.entries.resize(table.table_size);
-    for (perfect_hash_table::table_entry& entry : table.entries) {
-        entry.keyword = nullptr;
-    }
 
     for (keyword_token kt : keyword_tokens) {
         Hasher hasher(table.hash_basis);
         hash_selected_characters(table.character_selection, hasher, kt.keyword, std::strlen(kt.keyword));
-        std::uint32_t index = hasher.hash() % table.table_size;
-        bool taken = table.entries[index].keyword != nullptr;
+        std::uint32_t h = hasher.hash();
+        std::uint32_t index = h % table.table_size;
+        perfect_hash_table::table_entry &entry = table.entries[index];
+        bool taken = entry.keyword != nullptr;
         if (taken) {
             return false;
         }
-        table.entries[index].keyword = kt.keyword;
+        entry.keyword = kt.keyword;
+        entry.hash = h;
     }
 
     return true;
@@ -154,6 +158,7 @@ perfect_hash_table make_perfect_hash_table(const keyword_statistics& stats, tabl
 
     table.character_selection = strategy.character_selection;
     table.hasher = strategy.hasher;
+    table.inline_hash = strategy.inline_hash;
 
     unsigned long max_table_size = std::size(keyword_tokens) * 65536;
     switch (strategy.size_strategy) {
@@ -223,6 +228,13 @@ constexpr std::size_t max_keyword_size = %lu;
 
     std::fprintf(file, "%s", R"(
 struct table_entry {
+)");
+    if (table.inline_hash) {
+        std::fprintf(file, R"(
+    std::uint32_t hash;
+)");
+    }
+    std::fprintf(file, "%s", R"(
     const char keyword[max_keyword_size + 1];
     token_type type;
 };
@@ -231,10 +243,14 @@ constexpr table_entry table[table_size] = {
 )");
 
     for (const perfect_hash_table::table_entry& entry : table.entries) {
+        std::fprintf(file, "  {");
+        if (table.inline_hash) {
+            std::fprintf(file, "%luU, ", (unsigned long)entry.hash);
+        }
         if (entry.keyword == nullptr) {
-            std::fprintf(file, "  {\"\", token_type::identifier},\n");
+            std::fprintf(file, "\"\", token_type::identifier},\n");
         } else {
-            std::fprintf(file, "  {\"%s\", token_type::kw_%s},\n", entry.keyword, entry.keyword);
+            std::fprintf(file, "\"%s\", token_type::kw_%s},\n", entry.keyword, entry.keyword);
         }
     }
 
@@ -257,16 +273,26 @@ token_type look_up_identifier(const char* identifier, std::size_t size) noexcept
 
     %s hasher(hash_basis);
     hash_selected_characters(character_selection, hasher, identifier, size);
-    std::uint32_t index = hasher.hash() %% table_size;
+    std::uint32_t h = hasher.hash();
+    std::uint32_t index = h %% table_size;
 
     const table_entry& entry = table[index];
+)", hasher_class);
+    if (table.inline_hash) {
+        std::fprintf(file, "%s", R"(
+    if (h != entry.hash) {
+        return token_type::identifier;
+    }
+)");
+    }
+    std::fprintf(file, R"(
     if (std::strncmp(identifier, entry.keyword, size) == 0) {
         return entry.type;
     }
     return token_type::identifier;
 }
 }
-)", hasher_class);
+)");
 
     std::fclose(file);
 }
@@ -282,14 +308,16 @@ void go(int argc, char** argv) {
     };
 
     static constexpr ::option long_options[] = {
-        {"characters", required_argument, 0, 'c' },
-        {"hasher",     required_argument, 0, 'h' },
-        {"output",     required_argument, 0, 'o' },
-        {"table-size", required_argument, 0, 't' },
-        {nullptr,      0,                 0, 0   }
+        {"characters",  required_argument, 0, 'c' },
+        {"hasher",      required_argument, 0, 'h' },
+        {"output",      required_argument, 0, 'o' },
+        {"table-size",  required_argument, 0, 't' },
+        {"inline-hash", no_argument,       0, 'i' },
+        {nullptr,       0,                 0, 0   }
     };
 
     const char* out_file_path = nullptr;
+    bool inline_hash = false;
     std::optional<table_size_strategy> size_strategy;
     std::optional<character_selection_mask> character_selection;
     std::optional<hash_strategy> hasher;
@@ -317,6 +345,10 @@ void go(int argc, char** argv) {
                     {"lehmer", hash_strategy::lehmer},
                     {"lehmer128", hash_strategy::lehmer_128},
                 });
+                break;
+
+            case 'i':
+                inline_hash = true;
                 break;
 
             case 't':
@@ -357,6 +389,7 @@ done_parsing:
         .size_strategy = *size_strategy,
         .character_selection = *character_selection,
         .hasher = *hasher,
+        .inline_hash = inline_hash,
     };
 
     keyword_statistics stats = make_stats();

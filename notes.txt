@@ -1,6 +1,5 @@
 ## things to try
 
-* put full hash in table (optimize lookup failures)
 * two-level hash table
 * check first character
 * check first two characters

@@ -33,10 +33,18 @@ pht_combinations = \
 	--table-size=pot_--characters=23_--hasher=lehmer128 \
 	--table-size=pot_--characters=27_--hasher=lehmer128 \
 	--table-size=pot_--characters=29_--hasher=lehmer128 \
+	--table-size=pot_--characters=15_--hasher=lehmer128_--inline-hash \
+	--table-size=pot_--characters=23_--hasher=lehmer128_--inline-hash \
+	--table-size=pot_--characters=27_--hasher=lehmer128_--inline-hash \
+	--table-size=pot_--characters=29_--hasher=lehmer128_--inline-hash \
 	--table-size=small_--characters=15_--hasher=icrc32 \
 	--table-size=small_--characters=23_--hasher=icrc32 \
 	--table-size=small_--characters=27_--hasher=icrc32 \
-	--table-size=small_--characters=29_--hasher=icrc32
+	--table-size=small_--characters=29_--hasher=icrc32 \
+	--table-size=small_--characters=15_--hasher=icrc32_--inline-hash \
+	--table-size=small_--characters=23_--hasher=icrc32_--inline-hash \
+	--table-size=small_--characters=27_--hasher=icrc32_--inline-hash \
+	--table-size=small_--characters=29_--hasher=icrc32_--inline-hash
 
 pht_sos = $(foreach flags,$(pht_combinations),build/pht$(subst =,-,$(flags)).so)
 pht_cpps = $(foreach flags,$(pht_combinations),generated/pht$(subst =,-,$(flags)).cpp)
