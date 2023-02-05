@@ -20,7 +20,6 @@ gperf_combinations = \
 gperf_sos = $(foreach flags,$(gperf_combinations),build/gperf$(flags).so)
 gperf_cpps = $(foreach flags,$(gperf_combinations),generated/gperf$(flags).cpp)
 
-# Keep in sync with generate-pht.cpp.
 pht_combinations = \
 	pot-15-xx364 \
 	pot-23-xx364 \
@@ -98,15 +97,10 @@ build/generate-pht: generate-pht.cpp token.h pht.h fnv.h Makefile build/stamp
 define make_pht_so
 build/pht-$(flags).so: generated/pht-$(flags).cpp token.h pht.h fnv.h Makefile build/stamp
 	$$(CXX) $$(extra_CXXFLAGS) $$(CXXFLAGS) $$(extra_test_LDFLAGS) $$(LDFLAGS) -shared -o $$(@) $$(<)
+generated/pht-$(flags).cpp: build/generate-pht Makefile generated/stamp
+	./build/generate-pht $$(@)
 endef
 $(foreach flags,$(pht_combinations),$(eval $(call make_pht_so)))
-
-# We use one command to generate multiple .cpp files. Use a stamp file and
-# order-only dependencies to trick Make into only running the command once.
-build/pht-cpps-stamp: build/generate-pht Makefile generated/stamp
-	./build/generate-pht
-	touch $(@)
-$(pht_cpps): | build/pht-cpps-stamp
 
 define make_gperf_so
 build/gperf$(flags).so: generated/gperf$(flags).cpp token.h Makefile build/stamp

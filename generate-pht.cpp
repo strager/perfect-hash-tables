@@ -7,12 +7,14 @@
 #include <bit>
 #include <cassert>
 #include <cerrno>
+#include <charconv>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <map>
 #include <set>
 #include <string>
-#include <thread>
+#include <string_view>
 #include <vector>
 
 namespace pht {
@@ -271,58 +273,87 @@ void write_table(const std::string& file_path, const perfect_hash_table& table) 
     write_table(file_path.c_str(), table);
 }
 
-void go() {
+table_strategy parse_out_file_path(std::string_view path, const keyword_statistics& stats) {
+    constexpr std::string_view prefix = "generated/pht-";
+    constexpr std::string_view suffix = ".cpp";
+    if (!path.starts_with(prefix)) {
+        std::fprintf(stderr, "error: unexpected path: %.*s\n", (int)path.size(), path.data());
+        std::exit(1);
+    }
+    if (!path.ends_with(suffix)) {
+        std::fprintf(stderr, "error: unexpected path: %.*s\n", (int)path.size(), path.data());
+        std::exit(1);
+    }
+    path.remove_prefix(prefix.size());
+    path.remove_suffix(suffix.size());
+
+    std::vector<std::string_view> parts;
+    for (;;) {
+        auto hyphen = path.find('-');
+        if (hyphen == std::string_view::npos) {
+            parts.push_back(path);
+            break;
+        }
+        parts.push_back(path.substr(0, hyphen));
+        path = path.substr(hyphen + 1);
+    }
+
+    if (parts.size() != 3) {
+        std::fprintf(stderr, "error: expected 3 parts in path: %.*s\n", (int)path.size(), path.data());
+        std::exit(1);
+    }
+
+    auto look_up_or_die = [](std::string_view input, const char* what, const auto& map) -> auto {
+        auto it = map.find(input);
+        if (it == map.end()) {
+            std::fprintf(stderr, "error: cannot parse %s: %.*s", what, (int)input.size(), input.data());
+            std::exit(1);
+        }
+        return it->second;
+    };
+
+    table_strategy strategy;
+    strategy.size_strategy = look_up_or_die(parts[0], "table strategy", std::map<std::string_view, table_size_strategy>{
+        {"small", table_size_strategy::smallest},
+        {"pot", table_size_strategy::power_of_2},
+    });
+
+    
+    std::from_chars_result r = std::from_chars(parts[1].data(), parts[1].data() + parts[1].size(), strategy.character_selection);
+    if (r.ptr != parts[1].data() + parts[1].size() || r.ec != std::errc()) {
+        std::fprintf(stderr, "error: cannot parse character selection: %.*s", (int)parts[1].size(), parts[1].data());
+        std::exit(1);
+    }
+    if (std::count(stats.unique_character_selections.begin(), stats.unique_character_selections.end(), strategy.character_selection) == 0) {
+        std::fprintf(stderr, "error: character selection is not unique: %u", strategy.character_selection);
+        std::exit(1);
+    }
+
+    strategy.hasher = look_up_or_die(parts[2], "table strategy", std::map<std::string_view, hash_strategy>{
+        {"fnv1a32", hash_strategy::fnv1a32},
+        {"xx364", hash_strategy::xx3_64},
+        {"icrc32", hash_strategy::intel_crc32},
+        {"lehmer", hash_strategy::lehmer},
+        {"lehmer128", hash_strategy::lehmer_128},
+    });
+
+    return strategy;
+}
+
+void go(const char* out_file_path) {
     keyword_statistics stats = make_stats();
+    table_strategy strategy = parse_out_file_path(out_file_path, stats);
+    write_table(out_file_path, make_perfect_hash_table(stats, strategy));
+}
+}
+}
 
-    std::vector<std::thread> threads;
-    for (hash_strategy hasher : {hash_strategy::fnv1a32, hash_strategy::xx3_64, hash_strategy::intel_crc32, hash_strategy::lehmer_128}) {
-        std::string hasher_tag;
-        switch (hasher) {
-            case hash_strategy::fnv1a32: hasher_tag = "fnv1a32"; break;
-            case hash_strategy::xx3_64: hasher_tag = "xx364"; break;
-            case hash_strategy::intel_crc32: hasher_tag = "icrc32"; break;
-            case hash_strategy::lehmer: hasher_tag = "lehmer"; break;
-            case hash_strategy::lehmer_128: hasher_tag = "lehmer128"; break;
-        }
-        for (character_selection_mask character_selection : stats.unique_character_selections) {
-            if (std::popcount(character_selection) == 5) {
-                // Too expensive. Ignore.
-                continue;
-            }
-            std::string selection_tag = std::to_string(character_selection);
-            for (table_size_strategy table_size : {table_size_strategy::smallest, table_size_strategy::power_of_2}) {
-                // Prune slow implementations.
-                if (table_size == table_size_strategy::smallest && hasher == hash_strategy::fnv1a32) continue;
-                if (table_size == table_size_strategy::smallest && hasher == hash_strategy::lehmer_128) continue;
-                if (table_size == table_size_strategy::power_of_2 && hasher == hash_strategy::intel_crc32) continue;
-                // Prune more implementations.
-                if (table_size == table_size_strategy::smallest && hasher == hash_strategy::xx3_64) continue;
-
-                std::string table_size_tag;
-                switch (table_size) {
-                    case table_size_strategy::smallest: table_size_tag = "small"; break;
-                    case table_size_strategy::power_of_2: table_size_tag = "pot"; break;
-                }
-                threads.emplace_back([=]() -> void {
-                    write_table("generated/pht-" + table_size_tag + "-" + selection_tag + "-" + hasher_tag + ".cpp", make_perfect_hash_table(stats, table_strategy{
-                        .size_strategy = table_size,
-                        .character_selection = character_selection,
-                        .hasher = hasher,
-                    }));
-                });
-            }
-        }
+int main(int argc, char** argv) {
+    if (argc != 2) {
+        std::fprintf(stderr, "error: expected file path\n");
+        std::exit(1);
     }
-
-    for (std::thread& t : threads) {
-        t.join();
-    }
-}
-}
-}
-
-int main() {
-    pht::go();
+    pht::go(argv[1]);
     return 0;
 }
 
