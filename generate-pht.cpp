@@ -71,18 +71,50 @@ bool try_add_all_entries(perfect_hash_table& table) {
     table.entries.clear();
     table.entries.resize(table.table_size);
 
-    for (keyword_token kt : keyword_tokens) {
+    struct hash_and_index {
+        std::uint32_t hash;
+        std::uint32_t index;
+    };
+    auto make_hash_and_index = [&table](keyword_token kt) -> hash_and_index {
         Hasher hasher(table.hash_basis);
         hash_selected_characters(table.character_selection, hasher, kt.keyword.data(), kt.keyword.size());
         std::uint32_t h = hasher.hash();
         std::uint32_t index = h % table.table_size;
-        perfect_hash_table::table_entry &entry = table.entries[index];
+        return hash_and_index{
+            .hash = h,
+            .index = index,
+        };
+    };
+
+    std::size_t i;
+    for (i = 0; i + 4 <= std::size(keyword_tokens); i += 4) {
+        // Do several at a time for parallelism.
+        std::array<hash_and_index, 4> hashes_and_indexes;
+#pragma GCC unroll 4
+        for (std::size_t j = 0; j < hashes_and_indexes.size(); ++j) {
+            hashes_and_indexes[j] = make_hash_and_index(keyword_tokens[i + j]);
+        }
+        for (std::size_t j = 0; j < hashes_and_indexes.size(); ++j) {
+            hash_and_index hi = hashes_and_indexes[j];
+            perfect_hash_table::table_entry &entry = table.entries[hi.index];
+            bool taken = !entry.keyword.empty();
+            if (taken) {
+                return false;
+            }
+            entry.keyword = keyword_tokens[i + j].keyword;
+            entry.hash = hi.hash;
+        }
+    }
+    for (; i < std::size(keyword_tokens); i += 1) {
+        keyword_token kt = keyword_tokens[i];
+        hash_and_index hi = make_hash_and_index(kt);
+        perfect_hash_table::table_entry &entry = table.entries[hi.index];
         bool taken = !entry.keyword.empty();
         if (taken) {
             return false;
         }
         entry.keyword = kt.keyword;
-        entry.hash = h;
+        entry.hash = hi.hash;
     }
 
     return true;
