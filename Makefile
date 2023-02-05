@@ -1,9 +1,11 @@
 SHELL = bash
 
+clang_CXX = ~/Toolchains/clang-stage2/bin/clang++
+
 extra_test_LDFLAGS = -Wl,--undefined=look_up_identifier
 extra_CXXFLAGS = -std=c++20 -g -O3 -fvisibility=hidden -fPIC \
 	-I ~/tmp/Projects/xxhash/ -DXXH_INLINE_ALL \
-	-msse4
+	-msse4 -fcf-protection=full
 
 gperf_combinations = \
 	_ \
@@ -17,7 +19,7 @@ gperf_combinations = \
 	--compare-lengths_--readonly-tables \
 	--compare-lengths_--seven-bit \
 
-gperf_sos = $(foreach flags,$(gperf_combinations),build/gperf$(flags).so)
+gperf_sos = $(foreach flags,$(gperf_combinations),build/gperf$(flags).so build/gperf$(flags)-clang.so)
 gperf_cpps = $(foreach flags,$(gperf_combinations),generated/gperf$(flags).cpp)
 
 pht_combinations = \
@@ -50,7 +52,7 @@ pht_combinations = \
 	--table-size=small_--characters=27_--hasher=icrc32_--check-first \
 	--table-size=small_--characters=29_--hasher=icrc32_--check-first
 
-pht_sos = $(foreach flags,$(pht_combinations),build/pht$(subst =,-,$(flags)).so)
+pht_sos = $(foreach flags,$(pht_combinations),build/pht$(subst =,-,$(flags)).so build/pht$(subst =,-,$(flags))-clang.so)
 pht_cpps = $(foreach flags,$(pht_combinations),generated/pht$(subst =,-,$(flags)).cpp)
 
 custom_combinations = \
@@ -58,7 +60,7 @@ custom_combinations = \
 	linear-packed-z \
 	std-unordered-map
 
-custom_sos = $(foreach name,$(custom_combinations),build/$(name).so)
+custom_sos = $(foreach name,$(custom_combinations),build/$(name).so build/$(name)-clang.so)
 custom_cpps = $(foreach name,$(custom_combinations),$(name).cpp)
 
 sos = $(gperf_sos) $(pht_sos) $(custom_sos)
@@ -100,6 +102,8 @@ generated/implementations.inc: Makefile generated/stamp
 define make_custom_so
 build/$(name).so: $(name).cpp token.h Makefile build/stamp
 	$$(CXX) $$(extra_CXXFLAGS) $$(CXXFLAGS) $$(extra_test_LDFLAGS) $$(LDFLAGS) -shared -o $$(@) $$(<)
+build/$(name)-clang.so: $(name).cpp token.h Makefile build/stamp
+	$$(clang_CXX) $$(extra_CXXFLAGS) $$(CXXFLAGS) $$(extra_test_LDFLAGS) $$(LDFLAGS) -shared -o $$(@) $$(<)
 endef
 $(foreach name,$(custom_combinations),$(eval $(call make_custom_so)))
 
@@ -109,6 +113,8 @@ build/generate-pht: generate-pht.cpp token.h pht.h fnv.h Makefile build/stamp
 define make_pht_so
 build/pht$(subst =,-,$(flags)).so: generated/pht$(subst =,-,$(flags)).cpp token.h pht.h fnv.h Makefile build/stamp
 	$$(CXX) $$(extra_CXXFLAGS) $$(CXXFLAGS) $$(extra_test_LDFLAGS) $$(LDFLAGS) -shared -o $$(@) $$(<)
+build/pht$(subst =,-,$(flags))-clang.so: generated/pht$(subst =,-,$(flags)).cpp token.h pht.h fnv.h Makefile build/stamp
+	$$(clang_CXX) $$(extra_CXXFLAGS) $$(CXXFLAGS) $$(extra_test_LDFLAGS) $$(LDFLAGS) -shared -o $$(@) $$(<)
 generated/pht$(subst =,-,$(flags)).cpp: build/generate-pht Makefile generated/stamp
 	./build/generate-pht $(subst _, ,$(flags)) --output $$(@)
 endef
@@ -117,9 +123,12 @@ $(foreach flags,$(pht_combinations),$(eval $(call make_pht_so)))
 define make_gperf_so
 build/gperf$(flags).so: generated/gperf$(flags).cpp token.h Makefile build/stamp
 	$$(CXX) -I. $$(extra_CXXFLAGS) $$(CXXFLAGS) $$(extra_test_LDFLAGS) $$(LDFLAGS) $$(extra_gperf_CXXFLAGS) -shared -o $$(@) $$(<)
+build/gperf$(flags)-clang.so: generated/gperf$(flags).cpp token.h Makefile build/stamp
+	$$(clang_CXX) -I. $$(extra_CXXFLAGS) $$(CXXFLAGS) $$(extra_test_LDFLAGS) $$(LDFLAGS) $$(extra_gperf_CXXFLAGS) -shared -o $$(@) $$(<)
 
 ifeq ($(findstring --pic,$(flags)), --pic)
 build/gperf$(flags).so: extra_gperf_CXXFLAGS = -DGPERF_PIC
+build/gperf$(flags)-clang.so: extra_gperf_CXXFLAGS = -DGPERF_PIC
 endif
 
 generated/gperf$(flags).cpp: token.gperf Makefile generated/stamp
