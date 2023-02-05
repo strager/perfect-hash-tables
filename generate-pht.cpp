@@ -94,7 +94,7 @@ bool try_add_all_entries(perfect_hash_table& table, hash_strategy hasher) {
         case hash_strategy::xx3_64:
             return try_add_all_entries<xx3_64_hasher>(table);
         case hash_strategy::intel_crc32:
-            return try_add_all_entries<intel_crc32_hasher>(table);
+            return try_add_all_entries<intel_crc32_intrinsic_hasher>(table);
         case hash_strategy::lehmer:
             return try_add_all_entries<lehmer_hasher>(table);
         case hash_strategy::lehmer_128:
