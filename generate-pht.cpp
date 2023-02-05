@@ -11,7 +11,9 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <getopt.h>
 #include <map>
+#include <optional>
 #include <set>
 #include <string>
 #include <string_view>
@@ -269,91 +271,107 @@ token_type look_up_identifier(const char* identifier, std::size_t size) noexcept
     std::fclose(file);
 }
 
-void write_table(const std::string& file_path, const perfect_hash_table& table) {
-    write_table(file_path.c_str(), table);
-}
-
-table_strategy parse_out_file_path(std::string_view path, const keyword_statistics& stats) {
-    constexpr std::string_view prefix = "generated/pht-";
-    constexpr std::string_view suffix = ".cpp";
-    if (!path.starts_with(prefix)) {
-        std::fprintf(stderr, "error: unexpected path: %.*s\n", (int)path.size(), path.data());
-        std::exit(1);
-    }
-    if (!path.ends_with(suffix)) {
-        std::fprintf(stderr, "error: unexpected path: %.*s\n", (int)path.size(), path.data());
-        std::exit(1);
-    }
-    path.remove_prefix(prefix.size());
-    path.remove_suffix(suffix.size());
-
-    std::vector<std::string_view> parts;
-    for (;;) {
-        auto hyphen = path.find('-');
-        if (hyphen == std::string_view::npos) {
-            parts.push_back(path);
-            break;
-        }
-        parts.push_back(path.substr(0, hyphen));
-        path = path.substr(hyphen + 1);
-    }
-
-    if (parts.size() != 3) {
-        std::fprintf(stderr, "error: expected 3 parts in path: %.*s\n", (int)path.size(), path.data());
-        std::exit(1);
-    }
-
-    auto look_up_or_die = [](std::string_view input, const char* what, const auto& map) -> auto {
+void go(int argc, char** argv) {
+    auto look_up_or_die = [](const char* input, const char* what, const auto& map) -> auto {
         auto it = map.find(input);
         if (it == map.end()) {
-            std::fprintf(stderr, "error: cannot parse %s: %.*s", what, (int)input.size(), input.data());
+            std::fprintf(stderr, "error: cannot parse %s: %s", what, input);
             std::exit(1);
         }
         return it->second;
     };
 
-    table_strategy strategy;
-    strategy.size_strategy = look_up_or_die(parts[0], "table strategy", std::map<std::string_view, table_size_strategy>{
-        {"small", table_size_strategy::smallest},
-        {"pot", table_size_strategy::power_of_2},
-    });
+    static constexpr ::option long_options[] = {
+        {"characters", required_argument, 0, 'c' },
+        {"hasher",     required_argument, 0, 'h' },
+        {"output",     required_argument, 0, 'o' },
+        {"table-size", required_argument, 0, 't' },
+        {nullptr,      0,                 0, 0   }
+    };
 
-    
-    std::from_chars_result r = std::from_chars(parts[1].data(), parts[1].data() + parts[1].size(), strategy.character_selection);
-    if (r.ptr != parts[1].data() + parts[1].size() || r.ec != std::errc()) {
-        std::fprintf(stderr, "error: cannot parse character selection: %.*s", (int)parts[1].size(), parts[1].data());
+    const char* out_file_path = nullptr;
+    std::optional<table_size_strategy> size_strategy;
+    std::optional<character_selection_mask> character_selection;
+    std::optional<hash_strategy> hasher;
+
+    for (;;) {
+        int long_index = 0;
+        int opt = getopt_long_only(argc, argv, "", long_options, &long_index);
+        switch (opt) {
+            case 'c': {
+                character_selection.emplace();
+                const char* optarg_end = optarg + std::strlen(optarg);
+                std::from_chars_result r = std::from_chars(optarg, optarg_end, *character_selection);
+                if (r.ptr != optarg_end || r.ec != std::errc()) {
+                    std::fprintf(stderr, "error: cannot parse character selection: %s", optarg);
+                    std::exit(1);
+                }
+                break;
+            }
+
+            case 'h':
+                hasher = look_up_or_die(optarg, "--hasher", std::map<std::string_view, hash_strategy>{
+                    {"fnv1a32", hash_strategy::fnv1a32},
+                    {"xx364", hash_strategy::xx3_64},
+                    {"icrc32", hash_strategy::intel_crc32},
+                    {"lehmer", hash_strategy::lehmer},
+                    {"lehmer128", hash_strategy::lehmer_128},
+                });
+                break;
+
+            case 't':
+                size_strategy = look_up_or_die(optarg, "--table-size", std::map<std::string_view, table_size_strategy>{
+                    {"small", table_size_strategy::smallest},
+                    {"pot", table_size_strategy::power_of_2},
+                });
+                break;
+
+            case 'o':
+                out_file_path = optarg;
+                break;
+
+            case -1:
+                goto done_parsing;
+
+            default:
+                std::fprintf(stderr, "error: invalid option\n");
+                std::exit(1);
+                break;
+        }
+    }
+done_parsing:
+
+    if (!character_selection.has_value()) {
+        std::fprintf(stderr, "error: missing required --characters\n");
         std::exit(1);
     }
+    if (!hasher.has_value()) {
+        std::fprintf(stderr, "error: missing required --hasher\n");
+        std::exit(1);
+    }
+    if (!size_strategy.has_value()) {
+        std::fprintf(stderr, "error: missing required --table-size\n");
+        std::exit(1);
+    }
+    table_strategy strategy = {
+        .size_strategy = *size_strategy,
+        .character_selection = *character_selection,
+        .hasher = *hasher,
+    };
+
+    keyword_statistics stats = make_stats();
     if (std::count(stats.unique_character_selections.begin(), stats.unique_character_selections.end(), strategy.character_selection) == 0) {
         std::fprintf(stderr, "error: character selection is not unique: %u", strategy.character_selection);
         std::exit(1);
     }
 
-    strategy.hasher = look_up_or_die(parts[2], "table strategy", std::map<std::string_view, hash_strategy>{
-        {"fnv1a32", hash_strategy::fnv1a32},
-        {"xx364", hash_strategy::xx3_64},
-        {"icrc32", hash_strategy::intel_crc32},
-        {"lehmer", hash_strategy::lehmer},
-        {"lehmer128", hash_strategy::lehmer_128},
-    });
-
-    return strategy;
-}
-
-void go(const char* out_file_path) {
-    keyword_statistics stats = make_stats();
-    table_strategy strategy = parse_out_file_path(out_file_path, stats);
     write_table(out_file_path, make_perfect_hash_table(stats, strategy));
 }
 }
 }
 
 int main(int argc, char** argv) {
-    if (argc != 2) {
-        std::fprintf(stderr, "error: expected file path\n");
-        std::exit(1);
-    }
-    pht::go(argv[1]);
+    pht::go(argc, argv);
     return 0;
 }
 

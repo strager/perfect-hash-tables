@@ -21,25 +21,25 @@ gperf_sos = $(foreach flags,$(gperf_combinations),build/gperf$(flags).so)
 gperf_cpps = $(foreach flags,$(gperf_combinations),generated/gperf$(flags).cpp)
 
 pht_combinations = \
-	pot-15-xx364 \
-	pot-23-xx364 \
-	pot-27-xx364 \
-	pot-29-xx364 \
-	pot-15-fnv1a32 \
-	pot-23-fnv1a32 \
-	pot-27-fnv1a32 \
-	pot-29-fnv1a32 \
-	pot-15-lehmer128 \
-	pot-23-lehmer128 \
-	pot-27-lehmer128 \
-	pot-29-lehmer128 \
-	small-15-icrc32 \
-	small-23-icrc32 \
-	small-27-icrc32 \
-	small-29-icrc32
+	--table-size=pot_--characters=15_--hasher=xx364 \
+	--table-size=pot_--characters=23_--hasher=xx364 \
+	--table-size=pot_--characters=27_--hasher=xx364 \
+	--table-size=pot_--characters=29_--hasher=xx364 \
+	--table-size=pot_--characters=15_--hasher=fnv1a32 \
+	--table-size=pot_--characters=23_--hasher=fnv1a32 \
+	--table-size=pot_--characters=27_--hasher=fnv1a32 \
+	--table-size=pot_--characters=29_--hasher=fnv1a32 \
+	--table-size=pot_--characters=15_--hasher=lehmer128 \
+	--table-size=pot_--characters=23_--hasher=lehmer128 \
+	--table-size=pot_--characters=27_--hasher=lehmer128 \
+	--table-size=pot_--characters=29_--hasher=lehmer128 \
+	--table-size=small_--characters=15_--hasher=icrc32 \
+	--table-size=small_--characters=23_--hasher=icrc32 \
+	--table-size=small_--characters=27_--hasher=icrc32 \
+	--table-size=small_--characters=29_--hasher=icrc32
 
-pht_sos = $(foreach flags,$(pht_combinations),build/pht-$(flags).so)
-pht_cpps = $(foreach flags,$(pht_combinations),generated/pht-$(flags).cpp)
+pht_sos = $(foreach flags,$(pht_combinations),build/pht$(subst =,-,$(flags)).so)
+pht_cpps = $(foreach flags,$(pht_combinations),generated/pht$(subst =,-,$(flags)).cpp)
 
 custom_combinations = \
 	linear-packed-sized \
@@ -95,10 +95,10 @@ build/generate-pht: generate-pht.cpp token.h pht.h fnv.h Makefile build/stamp
 	$(CXX) $(extra_CXXFLAGS) $(CXXFLAGS) $(LDFLAGS) -o $(@) generate-pht.cpp
 
 define make_pht_so
-build/pht-$(flags).so: generated/pht-$(flags).cpp token.h pht.h fnv.h Makefile build/stamp
+build/pht$(subst =,-,$(flags)).so: generated/pht$(subst =,-,$(flags)).cpp token.h pht.h fnv.h Makefile build/stamp
 	$$(CXX) $$(extra_CXXFLAGS) $$(CXXFLAGS) $$(extra_test_LDFLAGS) $$(LDFLAGS) -shared -o $$(@) $$(<)
-generated/pht-$(flags).cpp: build/generate-pht Makefile generated/stamp
-	./build/generate-pht $$(@)
+generated/pht$(subst =,-,$(flags)).cpp: build/generate-pht Makefile generated/stamp
+	./build/generate-pht $(subst _, ,$(flags)) --output $$(@)
 endef
 $(foreach flags,$(pht_combinations),$(eval $(call make_pht_so)))
 
