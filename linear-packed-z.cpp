@@ -21,7 +21,7 @@ std::vector<table_entry> make_keyword_table() {
     result.reserve(std::size(keyword_tokens));
     for (keyword_token kt : keyword_tokens) {
         table_entry entry;
-        std::strcpy(entry.keyword, kt.keyword);
+        std::memcpy(entry.keyword, kt.keyword.data(), kt.keyword.size());
         entry.type = kt.type;
         result.push_back(entry);
     }

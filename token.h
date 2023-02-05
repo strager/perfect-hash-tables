@@ -5,6 +5,7 @@
 #define PERFECT_HASH_TABLES_TOKEN_H
 
 #include <cstdint>
+#include <string_view>
 
 namespace pht {
 enum class token_type : std::uint8_t {
@@ -93,7 +94,7 @@ enum class token_type : std::uint8_t {
 };
 
 struct keyword_token {
-    const char* keyword;
+    std::string_view keyword;
     token_type type;
 };
 constexpr keyword_token keyword_tokens[] = {

@@ -50,7 +50,7 @@ struct keyword_statistics {
 
 struct perfect_hash_table {
     struct table_entry {
-        const char* keyword = nullptr;
+        std::string_view keyword = std::string_view();
         std::uint32_t hash = 0;
     };
 
@@ -66,17 +66,18 @@ struct perfect_hash_table {
 };
 
 template <class Hasher>
+[[gnu::noinline]]
 bool try_add_all_entries(perfect_hash_table& table) {
     table.entries.clear();
     table.entries.resize(table.table_size);
 
     for (keyword_token kt : keyword_tokens) {
         Hasher hasher(table.hash_basis);
-        hash_selected_characters(table.character_selection, hasher, kt.keyword, std::strlen(kt.keyword));
+        hash_selected_characters(table.character_selection, hasher, kt.keyword.data(), kt.keyword.size());
         std::uint32_t h = hasher.hash();
         std::uint32_t index = h % table.table_size;
         perfect_hash_table::table_entry &entry = table.entries[index];
-        bool taken = entry.keyword != nullptr;
+        bool taken = !entry.keyword.empty();
         if (taken) {
             return false;
         }
@@ -105,6 +106,7 @@ bool try_add_all_entries(perfect_hash_table& table, hash_strategy hasher) {
 
 // Returns the number of attempts. If it's >= max_attempts, then building the
 // table failed.
+[[gnu::noinline]]
 int try_build_table(perfect_hash_table& table, int max_attempts) {
     table.hash_basis = 0x811c9dc5; // FNV-1a 32-bit basis.
     int attempts = 0;
@@ -121,12 +123,13 @@ int try_build_table(perfect_hash_table& table, int max_attempts) {
     }
 }
 
+[[gnu::noinline]]
 keyword_statistics make_stats() {
     keyword_statistics stats;
     stats.min_keyword_size = 0xffffffff;
     stats.max_keyword_size = 0;
     for (keyword_token kt : keyword_tokens) {
-        unsigned long size = std::strlen(kt.keyword);
+        unsigned long size = kt.keyword.size();
         stats.min_keyword_size = std::min(stats.min_keyword_size, size);
         stats.max_keyword_size = std::max(stats.max_keyword_size, size);
     }
@@ -135,7 +138,7 @@ keyword_statistics make_stats() {
         std::set<std::string> selections;
         for (keyword_token kt : keyword_tokens) {
             std::string selection;
-            std::size_t size = std::strlen(kt.keyword);
+            std::size_t size = kt.keyword.size();
             if (m & (1 << 0)) selection += kt.keyword[0];
             if (m & (1 << 1)) selection += kt.keyword[1];
             if (m & (1 << 2)) selection += kt.keyword[size-1];
@@ -250,10 +253,13 @@ constexpr table_entry table[table_size] = {
         if (table.inline_hash) {
             std::fprintf(file, "%luU, ", (unsigned long)entry.hash);
         }
-        if (entry.keyword == nullptr) {
+        if (entry.keyword.empty()) {
             std::fprintf(file, "\"\", token_type::identifier},\n");
         } else {
-            std::fprintf(file, "\"%s\", token_type::kw_%s},\n", entry.keyword, entry.keyword);
+            std::fprintf(
+                    file, "\"%.*s\", token_type::kw_%*s},\n",
+                    (int)entry.keyword.size(), entry.keyword.data(),
+                    (int)entry.keyword.size(), entry.keyword.data());
         }
     }
 
