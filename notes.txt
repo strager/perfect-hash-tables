@@ -1,7 +1,6 @@
 ## things to try
 
 * two-level hash table
-* check first character
 * check first two characters
 * check length
 * move string data out of line

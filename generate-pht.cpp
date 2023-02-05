@@ -39,6 +39,7 @@ struct table_strategy {
     character_selection_mask character_selection;
     hash_strategy hasher;
     bool inline_hash;
+    bool early_check_first_character;
 };
 
 struct keyword_statistics {
@@ -59,6 +60,7 @@ struct perfect_hash_table {
     hash_strategy hasher;
     unsigned long table_size;
     bool inline_hash;
+    bool early_check_first_character;
 
     std::vector<table_entry> entries;
 };
@@ -159,6 +161,7 @@ perfect_hash_table make_perfect_hash_table(const keyword_statistics& stats, tabl
     table.character_selection = strategy.character_selection;
     table.hasher = strategy.hasher;
     table.inline_hash = strategy.inline_hash;
+    table.early_check_first_character = strategy.early_check_first_character;
 
     unsigned long max_table_size = std::size(keyword_tokens) * 65536;
     switch (strategy.size_strategy) {
@@ -285,10 +288,23 @@ token_type look_up_identifier(const char* identifier, std::size_t size) noexcept
     }
 )");
     }
-    std::fprintf(file, R"(
+    if (table.early_check_first_character) {
+        std::fprintf(file, "%s", R"(
+    if (entry.keyword[0] != identifier[0]) {
+        return token_type::identifier;
+    }
+    if (std::strncmp(identifier + 1, entry.keyword + 1, size) == 0) {
+        return entry.type;
+    }
+)");
+    } else {
+        std::fprintf(file, "%s", R"(
     if (std::strncmp(identifier, entry.keyword, size) == 0) {
         return entry.type;
     }
+)");
+    }
+    std::fprintf(file, "%s", R"(
     return token_type::identifier;
 }
 }
@@ -309,6 +325,7 @@ void go(int argc, char** argv) {
 
     static constexpr ::option long_options[] = {
         {"characters",  required_argument, 0, 'c' },
+        {"check-first", no_argument,       0, '1' },
         {"hasher",      required_argument, 0, 'h' },
         {"output",      required_argument, 0, 'o' },
         {"table-size",  required_argument, 0, 't' },
@@ -318,6 +335,7 @@ void go(int argc, char** argv) {
 
     const char* out_file_path = nullptr;
     bool inline_hash = false;
+    bool early_check_first_character = false;
     std::optional<table_size_strategy> size_strategy;
     std::optional<character_selection_mask> character_selection;
     std::optional<hash_strategy> hasher;
@@ -336,6 +354,10 @@ void go(int argc, char** argv) {
                 }
                 break;
             }
+
+            case '1':
+                early_check_first_character = true;
+                break;
 
             case 'h':
                 hasher = look_up_or_die(optarg, "--hasher", std::map<std::string_view, hash_strategy>{
@@ -390,6 +412,7 @@ done_parsing:
         .character_selection = *character_selection,
         .hasher = *hasher,
         .inline_hash = inline_hash,
+        .early_check_first_character = early_check_first_character,
     };
 
     keyword_statistics stats = make_stats();

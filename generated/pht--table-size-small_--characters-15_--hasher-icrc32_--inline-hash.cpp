@@ -308,6 +308,7 @@ token_type look_up_identifier(const char* identifier, std::size_t size) noexcept
     if (std::strncmp(identifier, entry.keyword, size) == 0) {
         return entry.type;
     }
+
     return token_type::identifier;
 }
 }
