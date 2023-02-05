@@ -12,9 +12,9 @@
 
 namespace pht {
 namespace {
-void go(const char* so_path) {
+void go(const char* code_file_path, const char* so_path) {
     implementation impl = load_implementation(so_path);
-    std::vector<char> code = read_file("mixed.txt");
+    std::vector<char> code = read_file(code_file_path);
     std::vector<pht::lexed_token> tokens = lex(code.data());
     for (int i = 0; i < 10'000; ++i) {
         for (const lexed_token& t : tokens) {
@@ -26,12 +26,13 @@ void go(const char* so_path) {
 }
 
 int main(int argc, char** argv) {
-    if (argc <= 1) {
-        std::fprintf(stderr, "error: expected .so path\n");
+    if (argc <= 2) {
+        std::fprintf(stderr, "error: expected code file and .so path\n");
         std::exit(1);
     }
-    const char* so_path = argv[1];
-    pht::go(so_path);
+    const char* code_file_path = argv[1];
+    const char* so_path = argv[2];
+    pht::go(code_file_path, so_path);
     return 0;
 }
 
