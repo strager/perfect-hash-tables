@@ -1,5 +1,6 @@
 SHELL = bash
 
+CXX = g++-12
 clang_CXX = ~/Toolchains/clang-stage2/bin/clang++
 
 extra_test_LDFLAGS = -Wl,--undefined=look_up_identifier
