@@ -38,12 +38,17 @@ enum class hash_strategy {
     aes,
 };
 
+enum class string_compare_strategy {
+    strncmp,
+    check_first_then_strncmp,
+};
+
 struct table_strategy {
     table_size_strategy size_strategy;
     character_selection_mask character_selection;
     hash_strategy hasher;
+    string_compare_strategy string_compare;
     bool inline_hash;
-    bool early_check_first_character;
 };
 
 struct keyword_statistics {
@@ -386,8 +391,9 @@ token_type look_up_identifier(const char* identifier, std::size_t size) noexcept
     }
 )");
     }
-    if (table.strategy.early_check_first_character) {
-        std::fprintf(file, "%s", R"(
+    switch (table.strategy.string_compare) {
+        case string_compare_strategy::check_first_then_strncmp:
+            std::fprintf(file, "%s", R"(
     if (entry.keyword[0] != identifier[0]) {
         return token_type::identifier;
     }
@@ -395,12 +401,14 @@ token_type look_up_identifier(const char* identifier, std::size_t size) noexcept
         return token_type::identifier;
     }
 )");
-    } else {
-        std::fprintf(file, "%s", R"(
+            break;
+        case string_compare_strategy::strncmp:
+            std::fprintf(file, "%s", R"(
     if (std::strncmp(identifier, entry.keyword, size) != 0) {
         return token_type::identifier;
     }
 )");
+            break;
     }
     std::fprintf(file, "%s", R"(
     return entry.type;
@@ -524,8 +532,10 @@ done_parsing:
         .size_strategy = *size_strategy,
         .character_selection = *character_selection,
         .hasher = *hasher,
+        .string_compare = early_check_first_character
+            ? string_compare_strategy::check_first_then_strncmp
+            : string_compare_strategy::strncmp,
         .inline_hash = inline_hash,
-        .early_check_first_character = early_check_first_character,
     };
 
     keyword_statistics stats = make_stats();
