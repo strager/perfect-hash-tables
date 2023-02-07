@@ -41,6 +41,7 @@ enum class hash_strategy {
 enum class string_compare_strategy {
     strncmp,
     check_first_then_strncmp,
+    cmpestri,
 };
 
 struct table_strategy {
@@ -304,6 +305,7 @@ void write_table(const char* file_path, const perfect_hash_table& table) {
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
+#include <nmmintrin.h>
 
 namespace pht {
 namespace {
@@ -409,6 +411,19 @@ token_type look_up_identifier(const char* identifier, std::size_t size) noexcept
     }
 )");
             break;
+        case string_compare_strategy::cmpestri:
+            std::fprintf(file, "%s", R"(
+    int mismatch = _mm_cmpestri(
+        ::_mm_loadu_si32(identifier),
+        size,
+        ::_mm_loadu_si32(entry.keyword),
+        size,
+        _SIDD_UBYTE_OPS | _SIDD_CMP_EQUAL_EACH | _SIDD_LEAST_SIGNIFICANT);
+    if (mismatch != 0) {
+        return token_type::identifier;
+    }
+)");
+            break;
     }
     std::fprintf(file, "%s", R"(
     return entry.type;
@@ -481,6 +496,7 @@ void go(int argc, char** argv) {
                 string_compare = look_up_or_die(optarg, "--string-compare", std::map<std::string_view, string_compare_strategy>{
                     {"strncmp", string_compare_strategy::strncmp},
                     {"check1strncmp", string_compare_strategy::check_first_then_strncmp},
+                    {"cmpestri", string_compare_strategy::cmpestri},
                 });
                 break;
 

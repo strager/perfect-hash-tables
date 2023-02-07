@@ -55,6 +55,10 @@ pht_combinations = \
 	--table-size=small_--characters=23_--hasher=icrc32_--string-compare=check1strncmp \
 	--table-size=small_--characters=27_--hasher=icrc32_--string-compare=check1strncmp \
 	--table-size=small_--characters=29_--hasher=icrc32_--string-compare=check1strncmp \
+	--table-size=small_--characters=15_--hasher=icrc32_--string-compare=cmpestri \
+	--table-size=small_--characters=23_--hasher=icrc32_--string-compare=cmpestri \
+	--table-size=small_--characters=27_--hasher=icrc32_--string-compare=cmpestri \
+	--table-size=small_--characters=29_--hasher=icrc32_--string-compare=cmpestri \
 	--table-size=small_--characters=15_--hasher=aes \
 	--table-size=small_--characters=23_--hasher=aes \
 	--table-size=small_--characters=27_--hasher=aes \
