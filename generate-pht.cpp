@@ -108,9 +108,6 @@ struct perfect_hash_table {
 template <class Hasher>
 [[gnu::noinline]]
 bool try_add_all_entries(perfect_hash_table& table) {
-    table.entries.clear();
-    table.entries.resize(table.table_size);
-
     struct hash_and_index {
         std::uint32_t hash;
         std::uint32_t index;
@@ -197,6 +194,8 @@ int try_build_table(perfect_hash_table& table, int max_attempts) {
         if (attempts >= max_attempts) {
             return attempts;
         }
+        table.entries.clear();
+        table.entries.resize(table.table_size);
         bool succeeded = try_add_all_entries(table, table.strategy.hasher);
         if (succeeded) {
             return attempts;
