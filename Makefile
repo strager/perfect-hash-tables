@@ -1,8 +1,6 @@
 SHELL = bash
 
-CXX = g++-12 \
-	-fconstexpr-ops-limit=900000000 \
-	-fconstexpr-loop-limit=1000000
+CXX = g++-12
 clang_CXX = ~/Toolchains/clang-stage2/bin/clang++
 
 extra_test_LDFLAGS = -Wl,--undefined=look_up_identifier
