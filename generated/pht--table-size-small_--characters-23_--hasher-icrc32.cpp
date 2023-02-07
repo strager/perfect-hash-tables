@@ -284,10 +284,13 @@ token_type look_up_identifier(const char* identifier, std::size_t size) noexcept
 
     const table_entry& entry = table[index];
 
-    if (std::strncmp(identifier, entry.keyword, size) != 0) {
+
+    bool match = std::strncmp(identifier, entry.keyword, size) == 0;
+
+    if (match) {
+        return entry.type;
+    } else {
         return token_type::identifier;
     }
-
-    return entry.type;
 }
 }

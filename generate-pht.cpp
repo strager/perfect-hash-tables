@@ -385,6 +385,7 @@ token_type look_up_identifier(const char* identifier, std::size_t size) noexcept
     std::uint32_t index = h %% table_size;
 
     const table_entry& entry = table[index];
+
 )", hasher_class);
     if (table.strategy.inline_hash) {
         std::fprintf(file, "%s", R"(
@@ -399,34 +400,31 @@ token_type look_up_identifier(const char* identifier, std::size_t size) noexcept
     if (entry.keyword[0] != identifier[0]) {
         return token_type::identifier;
     }
-    if (std::strncmp(identifier + 1, entry.keyword + 1, size) != 0) {
-        return token_type::identifier;
-    }
+    bool match = std::strncmp(identifier + 1, entry.keyword + 1, size) == 0;
 )");
             break;
         case string_compare_strategy::strncmp:
             std::fprintf(file, "%s", R"(
-    if (std::strncmp(identifier, entry.keyword, size) != 0) {
-        return token_type::identifier;
-    }
+    bool match = std::strncmp(identifier, entry.keyword, size) == 0;
 )");
             break;
         case string_compare_strategy::cmpestri:
             std::fprintf(file, "%s", R"(
-    int mismatch = _mm_cmpestri(
+    bool match = _mm_cmpestri(
         ::_mm_loadu_si32(identifier),
         size,
         ::_mm_loadu_si32(entry.keyword),
         size,
-        _SIDD_UBYTE_OPS | _SIDD_CMP_EQUAL_EACH | _SIDD_LEAST_SIGNIFICANT);
-    if (mismatch != 0) {
-        return token_type::identifier;
-    }
+        _SIDD_UBYTE_OPS | _SIDD_CMP_EQUAL_EACH | _SIDD_LEAST_SIGNIFICANT) == 0;
 )");
             break;
     }
     std::fprintf(file, "%s", R"(
-    return entry.type;
+    if (match) {
+        return entry.type;
+    } else {
+        return token_type::identifier;
+    }
 }
 }
 )");

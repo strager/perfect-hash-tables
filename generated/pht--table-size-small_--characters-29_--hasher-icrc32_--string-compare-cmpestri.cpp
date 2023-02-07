@@ -293,16 +293,18 @@ token_type look_up_identifier(const char* identifier, std::size_t size) noexcept
 
     const table_entry& entry = table[index];
 
-    int mismatch = _mm_cmpestri(
+
+    bool match = _mm_cmpestri(
         ::_mm_loadu_si32(identifier),
         size,
         ::_mm_loadu_si32(entry.keyword),
         size,
-        _SIDD_UBYTE_OPS | _SIDD_CMP_EQUAL_EACH | _SIDD_LEAST_SIGNIFICANT);
-    if (mismatch != 0) {
+        _SIDD_UBYTE_OPS | _SIDD_CMP_EQUAL_EACH | _SIDD_LEAST_SIGNIFICANT) == 0;
+
+    if (match) {
+        return entry.type;
+    } else {
         return token_type::identifier;
     }
-
-    return entry.type;
 }
 }
