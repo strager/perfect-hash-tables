@@ -1,6 +1,9 @@
 ## things to try
 
-* two-level hash table
+* two-level hash table: real hash and real hash
+* two-level hash table: size and real hash
+* two hash tables: cuckoo hashing
+* Pearson hash function: https://dl.acm.org/doi/abs/10.1145/78973.78978
 * check first two characters
 * check length
 * move string data out of line
