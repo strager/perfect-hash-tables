@@ -297,9 +297,7 @@ token_type look_up_identifier(const char* identifier, std::size_t size) noexcept
     hash_selected_characters(character_selection, hasher, identifier, size);
     std::uint32_t h = hasher.hash();
     std::uint32_t index = h % table_size;
-
     const table_entry& entry = table[index];
-
 
     if (entry.keyword[0] != identifier[0]) {
         return token_type::identifier;

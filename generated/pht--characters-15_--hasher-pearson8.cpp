@@ -292,10 +292,8 @@ token_type look_up_identifier(const char* identifier, std::size_t size) noexcept
     pearson_8_hasher hasher(hash_seed);
     hash_selected_characters(character_selection, hasher, identifier, size);
     std::uint32_t h = hasher.hash();
-    std::uint32_t index = h % table_size;
-
+    std::uint32_t index = h & 255;
     const table_entry& entry = table[index];
-
 
     int comparison = std::strncmp(identifier, entry.keyword, size);
 

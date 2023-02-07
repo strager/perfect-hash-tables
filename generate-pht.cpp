@@ -383,11 +383,13 @@ token_type look_up_identifier(const char* identifier, std::size_t size) noexcept
     %s hasher(hash_seed);
     hash_selected_characters(character_selection, hasher, identifier, size);
     std::uint32_t h = hasher.hash();
-    std::uint32_t index = h %% table_size;
-
-    const table_entry& entry = table[index];
-
 )", hasher_class);
+    if (std::has_single_bit(table.table_size)) {
+        std::fprintf(file, "    std::uint32_t index = h & %lu;\n", table.table_size - 1);
+    } else {
+        std::fprintf(file, "%s", "    std::uint32_t index = h % table_size;\n");
+    }
+    std::fprintf(file, "    const table_entry& entry = table[index];\n");
     if (table.strategy.inline_hash) {
         std::fprintf(file, "%s", R"(
     if (h != entry.hash) {
