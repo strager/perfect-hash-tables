@@ -305,13 +305,7 @@ fail:
     return table;
 }
 
-void write_table(const char* file_path, const perfect_hash_table& table) {
-    FILE* file = std::fopen(file_path, "wb");
-    if (file == nullptr) {
-        std::fprintf(stderr, "error: failed to open %s: %s\n", file_path, std::strerror(errno));
-        std::exit(1);
-    }
-
+void write_table(FILE* file, const perfect_hash_table& table) {
     std::fprintf(file, R"(
 #include "../pht.h"
 #include "../token.h"
@@ -482,6 +476,16 @@ token_type look_up_identifier(const char* identifier, std::size_t size) noexcept
 }
 }
 )");
+}
+
+void write_table(const char* file_path, const perfect_hash_table& table) {
+    FILE* file = std::fopen(file_path, "wb");
+    if (file == nullptr) {
+        std::fprintf(stderr, "error: failed to open %s: %s\n", file_path, std::strerror(errno));
+        std::exit(1);
+    }
+
+    write_table(file, table);
 
     std::fclose(file);
 }
