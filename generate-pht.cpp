@@ -35,6 +35,7 @@ enum class hash_strategy {
     lehmer,
     lehmer_128,
     pearson_8,
+    aes,
 };
 
 struct table_strategy {
@@ -172,6 +173,8 @@ bool try_add_all_entries(perfect_hash_table& table, hash_strategy hasher) {
             return try_add_all_entries<lehmer_128_hasher>(table);
         case hash_strategy::pearson_8:
             return try_add_all_entries<pearson_8_hasher>(table);
+        case hash_strategy::aes:
+            return try_add_all_entries<aes_intrinsic_hasher>(table);
     }
     __builtin_unreachable();
 }
@@ -358,6 +361,7 @@ constexpr table_entry table[table_size] = {
         case hash_strategy::lehmer: hasher_class = "lehmer_hasher"; break;
         case hash_strategy::lehmer_128: hasher_class = "lehmer_128_hasher"; break;
         case hash_strategy::pearson_8: hasher_class = "pearson_8_hasher"; break;
+        case hash_strategy::aes: hasher_class = "aes_intrinsic_hasher"; break;
     }
     std::fprintf(file, R"(
 };
@@ -461,6 +465,7 @@ void go(int argc, char** argv) {
                     {"lehmer", hash_strategy::lehmer},
                     {"lehmer128", hash_strategy::lehmer_128},
                     {"pearson8", hash_strategy::pearson_8},
+                    {"aes", hash_strategy::aes},
                 });
                 break;
 

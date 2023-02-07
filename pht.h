@@ -13,6 +13,7 @@
 #include <cstring>
 #include <nmmintrin.h>
 #include <type_traits>
+#include <wmmintrin.h>
 #include <xxhash.h>
 
 namespace pht {
@@ -125,6 +126,43 @@ class intel_crc32_intrinsic_hasher {
 
   private:
     std::uint32_t hash_;
+};
+
+class aes_intrinsic_hasher {
+  public:
+    [[gnu::always_inline]]
+    explicit aes_intrinsic_hasher(std::uint32_t seed) noexcept
+        : hash_(::_mm_set_epi32(seed, seed, seed, seed)) {}
+
+    [[gnu::always_inline]]
+    void bytes(const std::uint8_t* bytes, std::size_t length) noexcept {
+        std::abort();
+    }
+
+    [[gnu::always_inline]]
+    void bytes_4(const std::uint8_t* bytes) noexcept {
+        std::uint32_t dword =
+            std::uint32_t(bytes[0]) << 0 |
+            std::uint32_t(bytes[1]) << 8 |
+            std::uint32_t(bytes[2]) << 16 |
+            std::uint32_t(bytes[3]) << 24;
+        this->dword(dword);
+    }
+
+    [[gnu::always_inline]]
+    void dword(std::uint32_t dword) noexcept {
+        this->hash_ = ::_mm_aesdec_si128(this->hash_, ::_mm_set_epi32(dword, dword, dword, dword));
+        this->hash_ = ::_mm_aesdec_si128(this->hash_, ::_mm_set_epi32(dword, dword, dword, dword));
+    }
+
+    std::uint32_t hash() const noexcept {
+        std::uint32_t parts[4];
+        std::memcpy(&parts, &this->hash_, 4*4);
+        return parts[0];
+    }
+
+  private:
+    ::__m128i hash_;
 };
 
 // https://en.wikipedia.org/wiki/Lehmer_random_number_generator

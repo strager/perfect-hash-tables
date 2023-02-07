@@ -9,7 +9,7 @@ extra_test_LDFLAGS = -Wl,--undefined=look_up_identifier
 extra_CXXFLAGS = -std=c++20 -g -O3 -fvisibility=hidden -fPIC \
 	-I ~/tmp/Projects/xxhash/ -DXXH_INLINE_ALL \
 	-I ~/tmp/Projects/frozen/include/ \
-	-msse4 -fcf-protection=full
+	-msse4 -maes -fcf-protection=full
 
 gperf_combinations = \
 	_ \
@@ -55,6 +55,14 @@ pht_combinations = \
 	--table-size=small_--characters=23_--hasher=icrc32_--check-first \
 	--table-size=small_--characters=27_--hasher=icrc32_--check-first \
 	--table-size=small_--characters=29_--hasher=icrc32_--check-first \
+	--table-size=small_--characters=15_--hasher=aes \
+	--table-size=small_--characters=23_--hasher=aes \
+	--table-size=small_--characters=27_--hasher=aes \
+	--table-size=small_--characters=29_--hasher=aes \
+	--table-size=pot_--characters=15_--hasher=aes \
+	--table-size=pot_--characters=23_--hasher=aes \
+	--table-size=pot_--characters=27_--hasher=aes \
+	--table-size=pot_--characters=29_--hasher=aes \
 	--characters=15_--hasher=pearson8
 
 pht_sos = $(foreach flags,$(pht_combinations),build/pht$(subst =,-,$(flags)).so build/pht$(subst =,-,$(flags))-clang.so)
