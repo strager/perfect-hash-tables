@@ -430,18 +430,18 @@ void go(int argc, char** argv) {
     };
 
     static constexpr ::option long_options[] = {
-        {"characters",  required_argument, 0, 'c' },
-        {"check-first", no_argument,       0, '1' },
-        {"hasher",      required_argument, 0, 'h' },
-        {"output",      required_argument, 0, 'o' },
-        {"table-size",  required_argument, 0, 't' },
-        {"inline-hash", no_argument,       0, 'i' },
-        {nullptr,       0,                 0, 0   }
+        {"characters",     required_argument, 0, 'c' },
+        {"hasher",         required_argument, 0, 'h' },
+        {"output",         required_argument, 0, 'o' },
+        {"string-compare", required_argument, 0, 's' },
+        {"table-size",     required_argument, 0, 't' },
+        {"inline-hash",    no_argument,       0, 'i' },
+        {nullptr,          0,                 0, 0   }
     };
 
     const char* out_file_path = nullptr;
     bool inline_hash = false;
-    bool early_check_first_character = false;
+    string_compare_strategy string_compare = string_compare_strategy::strncmp;
     std::optional<table_size_strategy> size_strategy;
     std::optional<character_selection_mask> character_selection;
     std::optional<hash_strategy> hasher;
@@ -461,10 +461,6 @@ void go(int argc, char** argv) {
                 break;
             }
 
-            case '1':
-                early_check_first_character = true;
-                break;
-
             case 'h':
                 hasher = look_up_or_die(optarg, "--hasher", std::map<std::string_view, hash_strategy>{
                     {"fnv1a32", hash_strategy::fnv1a32},
@@ -479,6 +475,13 @@ void go(int argc, char** argv) {
 
             case 'i':
                 inline_hash = true;
+                break;
+
+            case 's':
+                string_compare = look_up_or_die(optarg, "--string-compare", std::map<std::string_view, string_compare_strategy>{
+                    {"strncmp", string_compare_strategy::strncmp},
+                    {"check1strncmp", string_compare_strategy::check_first_then_strncmp},
+                });
                 break;
 
             case 't':
@@ -532,9 +535,7 @@ done_parsing:
         .size_strategy = *size_strategy,
         .character_selection = *character_selection,
         .hasher = *hasher,
-        .string_compare = early_check_first_character
-            ? string_compare_strategy::check_first_then_strncmp
-            : string_compare_strategy::strncmp,
+        .string_compare = string_compare,
         .inline_hash = inline_hash,
     };
 
