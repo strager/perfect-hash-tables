@@ -338,13 +338,14 @@ struct table_entry {
     std::uint32_t hash;
 )");
     }
-    std::fprintf(file, "%s", R"(
-    const char keyword[max_keyword_size + 1];
+    bool need_null_terminator = table.strategy.string_compare != string_compare_strategy::cmpestri;
+    std::fprintf(file, R"(
+    const char keyword[max_keyword_size + %d];
     token_type type;
 };
 
 constexpr table_entry table[table_size] = {
-)");
+)", need_null_terminator ? 1 : 0);
 
     for (const perfect_hash_table::table_entry& entry : table.entries) {
         std::fprintf(file, "  {");
@@ -354,9 +355,22 @@ constexpr table_entry table[table_size] = {
         if (entry.keyword.empty()) {
             std::fprintf(file, "\"\", token_type::identifier},\n");
         } else {
+            if (!need_null_terminator && entry.keyword.size() == table.stats.max_keyword_size) {
+                // We can't use a string literal because a string literal forces
+                // a null terminator (but we don't have space for a null
+                // terminator). Write the string character-by-character instead.
+                std::fprintf(file, "{");
+                for (char c : entry.keyword) {
+                    std::fprintf(file, "'%c',", c);
+                }
+                std::fprintf(file, "}");
+            } else {
+                std::fprintf(
+                        file, "\"%.*s\"",
+                        (int)entry.keyword.size(), entry.keyword.data());
+            }
             std::fprintf(
-                    file, "\"%.*s\", token_type::kw_%*s},\n",
-                    (int)entry.keyword.size(), entry.keyword.data(),
+                    file, ", token_type::kw_%*s},\n",
                     (int)entry.keyword.size(), entry.keyword.data());
         }
     }

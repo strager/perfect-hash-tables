@@ -17,7 +17,7 @@ constexpr std::uint32_t hash_seed = 2166172010UL;
 
 struct table_entry {
 
-    const char keyword[max_keyword_size + 1];
+    const char keyword[max_keyword_size + 0];
     token_type type;
 };
 
@@ -49,7 +49,7 @@ constexpr table_entry table[table_size] = {
   {"default", token_type::kw_default},
   {"", token_type::identifier},
   {"", token_type::identifier},
-  {"constructor", token_type::kw_constructor},
+  {{'c','o','n','s','t','r','u','c','t','o','r',}, token_type::kw_constructor},
   {"", token_type::identifier},
   {"", token_type::identifier},
   {"await", token_type::kw_await},
