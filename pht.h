@@ -12,6 +12,7 @@
 #include <cstdint>
 #include <cstring>
 #include <nmmintrin.h>
+#include <type_traits>
 #include <xxhash.h>
 
 namespace pht {
@@ -58,10 +59,10 @@ class xx3_64_hasher {
 class intel_crc32_hasher {
   public:
     [[gnu::always_inline]]
-    explicit intel_crc32_hasher(std::uint32_t basis) noexcept : hash_(basis) {}
+    explicit constexpr intel_crc32_hasher(std::uint32_t basis) noexcept : hash_(basis) {}
 
     [[gnu::always_inline]]
-    void bytes(const std::uint8_t* bytes, std::size_t length) noexcept {
+    constexpr void bytes(const std::uint8_t* bytes, std::size_t length) noexcept {
         // https://stackoverflow.com/a/29174491
         constexpr std::uint32_t poly = 0x82f63b78;
         for (std::size_t i = 0; i < length; ++i) {
@@ -72,12 +73,12 @@ class intel_crc32_hasher {
     }
 
     [[gnu::always_inline]]
-    void bytes_4(const std::uint8_t* bytes) noexcept {
+    constexpr void bytes_4(const std::uint8_t* bytes) noexcept {
         this->bytes(bytes, 4);
     }
 
     [[gnu::always_inline]]
-    void dword(std::uint32_t dword) noexcept {
+    constexpr void dword(std::uint32_t dword) noexcept {
         std::uint8_t bytes[] = {
             std::uint8_t(dword >> 0),
             std::uint8_t(dword >> 8),
@@ -87,7 +88,7 @@ class intel_crc32_hasher {
         this->bytes_4(bytes);
     }
 
-    std::uint32_t hash() const noexcept { return this->hash_; }
+    constexpr std::uint32_t hash() const noexcept { return this->hash_; }
 
   private:
     std::uint32_t hash_;
@@ -96,7 +97,7 @@ class intel_crc32_hasher {
 class intel_crc32_intrinsic_hasher {
   public:
     [[gnu::always_inline]]
-    explicit intel_crc32_intrinsic_hasher(std::uint32_t basis) noexcept : hash_(basis) {}
+    explicit constexpr intel_crc32_intrinsic_hasher(std::uint32_t basis) noexcept : hash_(basis) {}
 
     [[gnu::always_inline]]
     void bytes(const std::uint8_t* bytes, std::size_t length) noexcept {
@@ -170,14 +171,14 @@ class lehmer_hasher {
 class lehmer_128_hasher {
   public:
     [[gnu::always_inline]]
-    explicit lehmer_128_hasher(std::uint32_t basis) noexcept : hash_(basis) {}
+    explicit constexpr lehmer_128_hasher(std::uint32_t basis) noexcept : hash_(basis) {}
 
     void bytes(const std::uint8_t* bytes, std::size_t size) noexcept {
         std::abort();
     }
 
     [[gnu::always_inline]]
-    void bytes_4(const std::uint8_t* bytes) noexcept {
+    constexpr void bytes_4(const std::uint8_t* bytes) noexcept {
         std::uint32_t dword =
             std::uint32_t(bytes[0]) << 0 |
             std::uint32_t(bytes[1]) << 8 |
@@ -187,16 +188,16 @@ class lehmer_128_hasher {
     }
 
     [[gnu::always_inline]]
-    void dword(std::uint32_t dword) noexcept {
+    constexpr void dword(std::uint32_t dword) noexcept {
         this->hash_ = mix(dword ^ this->hash_);
     }
 
-    std::uint32_t hash() const noexcept { return this->hash_; }
+    constexpr std::uint32_t hash() const noexcept { return this->hash_; }
 
   private:
     std::uint32_t hash_;
 
-    static std::uint32_t mix(std::uint32_t seed) {
+    static constexpr std::uint32_t mix(std::uint32_t seed) {
         __uint128_t seed128 = seed;
         seed128 *= 0xda942042e4dd58b5;
         return seed128 >> 64;
@@ -205,18 +206,21 @@ class lehmer_128_hasher {
 
 template <class Hasher>
 [[gnu::always_inline]]
-inline void hash_selected_characters(character_selection_mask mask, Hasher& hasher, const char* s, std::size_t size) noexcept {
+inline constexpr void hash_selected_characters(character_selection_mask mask, Hasher& hasher, const char* s, std::size_t size) noexcept {
     if (std::popcount(mask) == 4) {
         std::uint32_t dword = 0;
         int i = 0;
 
         if ((mask & (3 << 0)) == (3 << 0)) {
             // Copy two bytes at once:
-            //std::uint32_t w = s[0] | (s[1] << 8);
             std::uint16_t w;
-            // FIXME(strager): This is endian-dependent, but it makes GCC
-            // generate the code we want.
-            std::memcpy(&w, s, 2);
+            if (std::is_constant_evaluated()) {
+                w = s[0] | (s[1] << 8);
+            } else {
+                // FIXME(strager): This is endian-dependent, but it makes GCC
+                // generate the code we want.
+                std::memcpy(&w, s, 2);
+            }
             dword |= w;
             i += 2;
         } else {
@@ -226,11 +230,14 @@ inline void hash_selected_characters(character_selection_mask mask, Hasher& hash
 
         if ((mask & (3 << 2)) == (3 << 2)) {
             // Copy two bytes at once:
-            //std::uint32_t w = s[size-2] | (s[size-1] << 8);
             std::uint16_t w;
-            // FIXME(strager): This is endian-dependent, but it makes GCC
-            // generate the code we want.
-            std::memcpy(&w, &s[size-2], 2);
+            if (std::is_constant_evaluated()) {
+                w = s[size-2] | (s[size-1] << 8);
+            } else {
+                // FIXME(strager): This is endian-dependent, but it makes GCC
+                // generate the code we want.
+                std::memcpy(&w, &s[size-2], 2);
+            }
             dword |= w << (i * 8);
             i += 2;
         } else {
