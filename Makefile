@@ -54,7 +54,8 @@ pht_combinations = \
 	--table-size=small_--characters=15_--hasher=icrc32_--check-first \
 	--table-size=small_--characters=23_--hasher=icrc32_--check-first \
 	--table-size=small_--characters=27_--hasher=icrc32_--check-first \
-	--table-size=small_--characters=29_--hasher=icrc32_--check-first
+	--table-size=small_--characters=29_--hasher=icrc32_--check-first \
+	--characters=15_--hasher=pearson8
 
 pht_sos = $(foreach flags,$(pht_combinations),build/pht$(subst =,-,$(flags)).so build/pht$(subst =,-,$(flags))-clang.so)
 pht_cpps = $(foreach flags,$(pht_combinations),generated/pht$(subst =,-,$(flags)).cpp)

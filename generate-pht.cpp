@@ -14,6 +14,7 @@
 #include <getopt.h>
 #include <map>
 #include <optional>
+#include <random>
 #include <set>
 #include <string>
 #include <string_view>
@@ -24,6 +25,7 @@ namespace {
 enum class table_size_strategy {
     smallest,
     power_of_2,
+    fixed_256,  // for hash_strategy::pearson_8
 };
 
 enum class hash_strategy {
@@ -32,6 +34,7 @@ enum class hash_strategy {
     intel_crc32,
     lehmer,
     lehmer_128,
+    pearson_8,
 };
 
 struct table_strategy {
@@ -48,16 +51,36 @@ struct keyword_statistics {
     std::vector<character_selection_mask> unique_character_selections;
 };
 
-struct table_seed {
+class table_seed {
+public:
     void next() {
         this->data += 1;
+        this->data_256_byte_initd = false;
     }
 
     unsigned long get_32() const {
         return this->data;
     }
 
+    const std::uint8_t* get_256_byte() const {
+        if (!this->data_256_byte_initd) {
+            this->init_data_256_byte();
+        }
+        return this->data_256_byte;
+    }
+
+private:
+    [[gnu::noinline]]
+    void init_data_256_byte() const {
+        std::iota(std::begin(this->data_256_byte), std::end(this->data_256_byte), 0);
+        std::mt19937 rng(this->data);
+        std::shuffle(std::begin(this->data_256_byte), std::end(this->data_256_byte), rng);
+        this->data_256_byte_initd = true;
+    }
+
     unsigned long data = 0x811c9dc5; // FNV-1a 32-bit basis.
+    mutable bool data_256_byte_initd = false;
+    mutable std::uint8_t data_256_byte[256];
 };
 
 struct perfect_hash_table {
@@ -85,7 +108,13 @@ bool try_add_all_entries(perfect_hash_table& table) {
         std::uint32_t index;
     };
     auto make_hash_and_index = [&table](keyword_token kt) -> hash_and_index {
-        Hasher hasher(table.seed.get_32());
+        std::optional<Hasher> optional_hasher;
+        if constexpr (std::is_same_v<Hasher, pearson_8_hasher>) {
+            optional_hasher.emplace(table.seed.get_256_byte());
+        } else {
+            optional_hasher.emplace(table.seed.get_32());
+        }
+        Hasher& hasher = *optional_hasher;
         hash_selected_characters(table.strategy.character_selection, hasher, kt.keyword.data(), kt.keyword.size());
         std::uint32_t h = hasher.hash();
         std::uint32_t index = h % table.table_size;
@@ -141,6 +170,8 @@ bool try_add_all_entries(perfect_hash_table& table, hash_strategy hasher) {
             return try_add_all_entries<lehmer_hasher>(table);
         case hash_strategy::lehmer_128:
             return try_add_all_entries<lehmer_128_hasher>(table);
+        case hash_strategy::pearson_8:
+            return try_add_all_entries<pearson_8_hasher>(table);
     }
     __builtin_unreachable();
 }
@@ -212,9 +243,13 @@ perfect_hash_table make_perfect_hash_table(const keyword_statistics& stats, tabl
         case table_size_strategy::power_of_2:
             table.table_size = std::bit_ceil(std::size(keyword_tokens));
             break;
+        case table_size_strategy::fixed_256:
+            table.table_size = 256;
+            break;
     }
     for (;;) {
         if (table.table_size > max_table_size) {
+fail:
             std::fprintf(
                 stderr,
                 "can't generate table of size %lu from %zu items\n",
@@ -240,6 +275,8 @@ perfect_hash_table make_perfect_hash_table(const keyword_statistics& stats, tabl
             case table_size_strategy::power_of_2:
                 table.table_size *= 2;
                 break;
+            case table_size_strategy::fixed_256:
+                goto fail;
         }
     }
 
@@ -263,14 +300,26 @@ void write_table(const char* file_path, const perfect_hash_table& table) {
 namespace pht {
 namespace {
 constexpr character_selection_mask character_selection = %uU;
-constexpr std::uint32_t hash_seed = %luUL;
 constexpr std::uint32_t table_size = %luUL;
 constexpr std::size_t min_keyword_size = %lu;
 constexpr std::size_t max_keyword_size = %lu;
+)", table.strategy.character_selection, table.table_size, table.stats.min_keyword_size, table.stats.max_keyword_size);
 
-)", table.strategy.character_selection, table.seed.get_32(), table.table_size, table.stats.min_keyword_size, table.stats.max_keyword_size);
+    switch (table.strategy.hasher) {
+        case hash_strategy::pearson_8:
+            std::fprintf(file, "constexpr std::uint8_t hash_seed[] = {\n   ");
+            for (int i = 0; i < 256; ++i) {
+                std::fprintf(file, " 0x%02x,", table.seed.get_256_byte()[i]);
+            }
+            std::fprintf(file, "\n};\n");
+            break;
+        default:
+            std::fprintf(file, "constexpr std::uint32_t hash_seed = %luUL;\n", table.seed.get_32());
+            break;
+    }
 
     std::fprintf(file, "%s", R"(
+
 struct table_entry {
 )");
     if (table.strategy.inline_hash) {
@@ -308,6 +357,7 @@ constexpr table_entry table[table_size] = {
         case hash_strategy::intel_crc32: hasher_class = "intel_crc32_intrinsic_hasher"; break;
         case hash_strategy::lehmer: hasher_class = "lehmer_hasher"; break;
         case hash_strategy::lehmer_128: hasher_class = "lehmer_128_hasher"; break;
+        case hash_strategy::pearson_8: hasher_class = "pearson_8_hasher"; break;
     }
     std::fprintf(file, R"(
 };
@@ -410,6 +460,7 @@ void go(int argc, char** argv) {
                     {"icrc32", hash_strategy::intel_crc32},
                     {"lehmer", hash_strategy::lehmer},
                     {"lehmer128", hash_strategy::lehmer_128},
+                    {"pearson8", hash_strategy::pearson_8},
                 });
                 break;
 
@@ -447,10 +498,23 @@ done_parsing:
         std::fprintf(stderr, "error: missing required --hasher\n");
         std::exit(1);
     }
-    if (!size_strategy.has_value()) {
+    if (!size_strategy.has_value() && hasher != hash_strategy::pearson_8) {
         std::fprintf(stderr, "error: missing required --table-size\n");
         std::exit(1);
     }
+
+    if (*hasher == hash_strategy::pearson_8) {
+        if (size_strategy.has_value()) {
+            std::fprintf(stderr, "error: --table-size incompatible with --hasher=pearson8\n");
+            std::exit(1);
+        }
+        size_strategy = table_size_strategy::fixed_256;
+        if (inline_hash) {
+            std::fprintf(stderr, "error: --inline-hash incompatible with --hasher=pearson8\n");
+            std::exit(1);
+        }
+    }
+
     table_strategy strategy = {
         .size_strategy = *size_strategy,
         .character_selection = *character_selection,

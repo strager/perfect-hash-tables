@@ -8,10 +8,10 @@
 namespace pht {
 namespace {
 constexpr character_selection_mask character_selection = 23U;
-constexpr std::uint32_t hash_seed = 2166182962UL;
 constexpr std::uint32_t table_size = 256UL;
 constexpr std::size_t min_keyword_size = 2;
 constexpr std::size_t max_keyword_size = 11;
+constexpr std::uint32_t hash_seed = 2166182962UL;
 
 
 struct table_entry {

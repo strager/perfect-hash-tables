@@ -204,17 +204,55 @@ class lehmer_128_hasher {
     }
 };
 
+// https://dl.acm.org/doi/pdf/10.1145/78973.78978
+//
+// Behavior for character selection mask 0b01111:
+//   seed[seed[seed[seed[s[0]] ^ s[1]] ^ s[-2]] ^ s[-1]]
+class pearson_8_hasher {
+  public:
+    [[gnu::always_inline]]
+    explicit constexpr pearson_8_hasher(const std::uint8_t* seed) noexcept : seed_(seed) {}
+
+    constexpr void bytes(const std::uint8_t* bytes, std::size_t size) noexcept {
+        for (std::size_t i = 0; i < size; ++i) {
+            this->hash_ = this->seed_[this->hash_ ^ bytes[i]];
+        }
+    }
+
+    [[gnu::always_inline]]
+    constexpr void bytes_4(const std::uint8_t* bytes) noexcept {
+        this->bytes(bytes, 4);
+    }
+
+    [[gnu::always_inline]]
+    constexpr void dword(std::uint32_t dword) noexcept {
+        std::uint8_t bytes[] = {
+            std::uint8_t(dword >> 0),
+            std::uint8_t(dword >> 8),
+            std::uint8_t(dword >> 16),
+            std::uint8_t(dword >> 24),
+        };
+        this->bytes_4(bytes);
+    }
+
+    constexpr std::uint32_t hash() const noexcept { return this->hash_; }
+
+  private:
+    const std::uint8_t* seed_;
+    std::uint8_t hash_ = 0;
+};
+
 template <class Hasher>
 [[gnu::always_inline]]
 inline constexpr void hash_selected_characters(character_selection_mask mask, Hasher& hasher, const char* s, std::size_t size) noexcept {
-    if (std::popcount(mask) == 4) {
+    if (std::popcount(mask) == 4 && !std::is_same_v<Hasher, pearson_8_hasher>) {
         std::uint32_t dword = 0;
         int i = 0;
 
         if ((mask & (3 << 0)) == (3 << 0)) {
             // Copy two bytes at once:
             std::uint16_t w;
-            if (std::is_constant_evaluated()) {
+            if (std::is_constant_evaluated() || std::is_same_v<Hasher, pearson_8_hasher>) {
                 w = s[0] | (s[1] << 8);
             } else {
                 // FIXME(strager): This is endian-dependent, but it makes GCC
@@ -231,7 +269,7 @@ inline constexpr void hash_selected_characters(character_selection_mask mask, Ha
         if ((mask & (3 << 2)) == (3 << 2)) {
             // Copy two bytes at once:
             std::uint16_t w;
-            if (std::is_constant_evaluated()) {
+            if (std::is_constant_evaluated() || std::is_same_v<Hasher, pearson_8_hasher>) {
                 w = s[size-2] | (s[size-1] << 8);
             } else {
                 // FIXME(strager): This is endian-dependent, but it makes GCC
@@ -254,7 +292,7 @@ inline constexpr void hash_selected_characters(character_selection_mask mask, Ha
         std::array<std::uint8_t, 5> bytes;
         int i = 0;
 
-        if ((mask & (3 << 0)) == (3 << 0)) {
+        if (false && (mask & (3 << 0)) == (3 << 0)) {
             // Copy two bytes at once:
             std::memcpy(&bytes[i], s, 2);
             i += 2;
@@ -263,7 +301,7 @@ inline constexpr void hash_selected_characters(character_selection_mask mask, Ha
             if (mask & (1 << 1)) bytes[i++] = (std::uint8_t)s[1];
         }
 
-        if ((mask & (3 << 2)) == (3 << 2)) {
+        if (false && (mask & (3 << 2)) == (3 << 2)) {
             // Copy two bytes at once:
             std::memcpy(&bytes[i], &s[size-2], 2);
             i += 2;
