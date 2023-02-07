@@ -56,11 +56,8 @@ struct perfect_hash_table {
 
     keyword_statistics stats;
     unsigned long hash_basis;
-    character_selection_mask character_selection;
-    hash_strategy hasher;
     unsigned long table_size;
-    bool inline_hash;
-    bool early_check_first_character;
+    table_strategy strategy;
 
     std::vector<table_entry> entries;
 };
@@ -77,7 +74,7 @@ bool try_add_all_entries(perfect_hash_table& table) {
     };
     auto make_hash_and_index = [&table](keyword_token kt) -> hash_and_index {
         Hasher hasher(table.hash_basis);
-        hash_selected_characters(table.character_selection, hasher, kt.keyword.data(), kt.keyword.size());
+        hash_selected_characters(table.strategy.character_selection, hasher, kt.keyword.data(), kt.keyword.size());
         std::uint32_t h = hasher.hash();
         std::uint32_t index = h % table.table_size;
         return hash_and_index{
@@ -147,7 +144,7 @@ int try_build_table(perfect_hash_table& table, int max_attempts) {
         if (attempts >= max_attempts) {
             return attempts;
         }
-        bool succeeded = try_add_all_entries(table, table.hasher);
+        bool succeeded = try_add_all_entries(table, table.strategy.hasher);
         if (succeeded) {
             return attempts;
         }
@@ -193,10 +190,7 @@ perfect_hash_table make_perfect_hash_table(const keyword_statistics& stats, tabl
     perfect_hash_table table;
     table.stats = stats;
 
-    table.character_selection = strategy.character_selection;
-    table.hasher = strategy.hasher;
-    table.inline_hash = strategy.inline_hash;
-    table.early_check_first_character = strategy.early_check_first_character;
+    table.strategy = strategy;
 
     unsigned long max_table_size = std::size(keyword_tokens) * 65536;
     switch (strategy.size_strategy) {
@@ -262,12 +256,12 @@ constexpr std::uint32_t table_size = %luUL;
 constexpr std::size_t min_keyword_size = %lu;
 constexpr std::size_t max_keyword_size = %lu;
 
-)", table.character_selection, table.hash_basis, table.table_size, table.stats.min_keyword_size, table.stats.max_keyword_size);
+)", table.strategy.character_selection, table.hash_basis, table.table_size, table.stats.min_keyword_size, table.stats.max_keyword_size);
 
     std::fprintf(file, "%s", R"(
 struct table_entry {
 )");
-    if (table.inline_hash) {
+    if (table.strategy.inline_hash) {
         std::fprintf(file, R"(
     std::uint32_t hash;
 )");
@@ -282,7 +276,7 @@ constexpr table_entry table[table_size] = {
 
     for (const perfect_hash_table::table_entry& entry : table.entries) {
         std::fprintf(file, "  {");
-        if (table.inline_hash) {
+        if (table.strategy.inline_hash) {
             std::fprintf(file, "%luU, ", (unsigned long)entry.hash);
         }
         if (entry.keyword.empty()) {
@@ -296,7 +290,7 @@ constexpr table_entry table[table_size] = {
     }
 
     const char* hasher_class;
-    switch (table.hasher) {
+    switch (table.strategy.hasher) {
         case hash_strategy::xx3_64: hasher_class = "xx3_64_hasher"; break;
         case hash_strategy::fnv1a32: hasher_class = "fnv1a32"; break;
         case hash_strategy::intel_crc32: hasher_class = "intel_crc32_intrinsic_hasher"; break;
@@ -319,14 +313,14 @@ token_type look_up_identifier(const char* identifier, std::size_t size) noexcept
 
     const table_entry& entry = table[index];
 )", hasher_class);
-    if (table.inline_hash) {
+    if (table.strategy.inline_hash) {
         std::fprintf(file, "%s", R"(
     if (h != entry.hash) {
         return token_type::identifier;
     }
 )");
     }
-    if (table.early_check_first_character) {
+    if (table.strategy.early_check_first_character) {
         std::fprintf(file, "%s", R"(
     if (entry.keyword[0] != identifier[0]) {
         return token_type::identifier;
