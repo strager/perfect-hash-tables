@@ -95,12 +95,27 @@ struct perfect_hash_table {
     struct table_entry {
         std::string_view keyword = std::string_view();
         std::uint32_t hash = 0;
+
+        // If 'generation' is out of sync with the table's 'generation', then
+        // this entry is vacant thus 'keyword' and 'hash' should be ignored.
+        int generation = 0;
+
+        bool is_taken(int generation) const {
+            return generation == this->generation && !this->keyword.empty();
+        }
+
+        void take(std::string_view keyword, std::uint32_t hash, int generation) {
+            this->keyword = keyword;
+            this->hash = hash;
+            this->generation = generation;
+        }
     };
 
     keyword_statistics stats;
     table_seed seed;
     unsigned long table_size;
     table_strategy strategy;
+    int generation;
 
     std::vector<table_entry> entries;
 };
@@ -129,6 +144,7 @@ bool try_add_all_entries(perfect_hash_table& table) {
         };
     };
 
+    int generation = table.generation;
     std::size_t i;
     for (i = 0; i + 4 <= std::size(keyword_tokens); i += 4) {
         // Do several at a time for parallelism.
@@ -140,24 +156,20 @@ bool try_add_all_entries(perfect_hash_table& table) {
         for (std::size_t j = 0; j < hashes_and_indexes.size(); ++j) {
             hash_and_index hi = hashes_and_indexes[j];
             perfect_hash_table::table_entry &entry = table.entries[hi.index];
-            bool taken = !entry.keyword.empty();
-            if (taken) {
+            if (entry.is_taken(generation)) {
                 return false;
             }
-            entry.keyword = keyword_tokens[i + j].keyword;
-            entry.hash = hi.hash;
+            entry.take(keyword_tokens[i + j].keyword, hi.hash, generation);
         }
     }
     for (; i < std::size(keyword_tokens); i += 1) {
         keyword_token kt = keyword_tokens[i];
         hash_and_index hi = make_hash_and_index(kt);
         perfect_hash_table::table_entry &entry = table.entries[hi.index];
-        bool taken = !entry.keyword.empty();
-        if (taken) {
+        if (entry.is_taken(generation)) {
             return false;
         }
-        entry.keyword = kt.keyword;
-        entry.hash = hi.hash;
+        entry.take(kt.keyword, hi.hash, generation);
     }
 
     return true;
@@ -188,14 +200,15 @@ bool try_add_all_entries(perfect_hash_table& table, hash_strategy hasher) {
 [[gnu::noinline]]
 int try_build_table(perfect_hash_table& table, int max_attempts) {
     table.seed = table_seed();
+    table.entries.clear();  // Reset generations.
+    table.entries.resize(table.table_size);
     int attempts = 0;
     for (;;) {
         attempts += 1;
+        table.generation = attempts;
         if (attempts >= max_attempts) {
             return attempts;
         }
-        table.entries.clear();
-        table.entries.resize(table.table_size);
         bool succeeded = try_add_all_entries(table, table.strategy.hasher);
         if (succeeded) {
             return attempts;
@@ -348,12 +361,15 @@ constexpr table_entry table[table_size] = {
 
     for (const perfect_hash_table::table_entry& entry : table.entries) {
         std::fprintf(file, "  {");
-        if (table.strategy.inline_hash) {
-            std::fprintf(file, "%luU, ", (unsigned long)entry.hash);
-        }
-        if (entry.keyword.empty()) {
+        if (!entry.is_taken(table.generation)) {
+            if (table.strategy.inline_hash) {
+                std::fprintf(file, "0U, ");
+            }
             std::fprintf(file, "\"\", token_type::identifier},\n");
         } else {
+            if (table.strategy.inline_hash) {
+                std::fprintf(file, "%luU, ", (unsigned long)entry.hash);
+            }
             if (!need_null_terminator && entry.keyword.size() == table.stats.max_keyword_size) {
                 // We can't use a string literal because a string literal forces
                 // a null terminator (but we don't have space for a null
