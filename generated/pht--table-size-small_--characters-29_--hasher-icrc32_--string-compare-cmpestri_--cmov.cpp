@@ -294,13 +294,28 @@ token_type look_up_identifier(const char* identifier, std::size_t size) noexcept
     const table_entry& entry = table[index];
 
 
-    int comparison = std::strncmp(identifier, entry.keyword, size);
+    int comparison = _mm_cmpestri(
+        ::_mm_loadu_si32(identifier),
+        size,
+        ::_mm_loadu_si32(entry.keyword),
+        size,
+        _SIDD_UBYTE_OPS | _SIDD_CMP_EQUAL_EACH | _SIDD_LEAST_SIGNIFICANT);
 
-    if (comparison == 0) {
-        return entry.type;
-    } else {
-        return token_type::identifier;
-    }
+    int result;
+    static_assert(sizeof(token_type) == 1, "If this assertion fails, change movzbl below.");
+    int temp;
+    __asm__ (
+        "test %[comparison], %[comparison]\n"
+        "movzbl %[entry_token_type], %[temp]\n"
+        "movl %[token_type_identifier], %[result]\n"
+        "cmove %[temp], %[result]\n"
+        : [result]"=r"(result), [temp]"=&r"(temp)
+        : [comparison]"r"(comparison),
+          [entry_token_type]"m"(entry.type),
+          [token_type_identifier]"i"(token_type::identifier)
+        : "cc"
+    );
+    return (token_type)result;
 
 }
 }

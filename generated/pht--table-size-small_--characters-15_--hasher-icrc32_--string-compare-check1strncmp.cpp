@@ -304,12 +304,13 @@ token_type look_up_identifier(const char* identifier, std::size_t size) noexcept
     if (entry.keyword[0] != identifier[0]) {
         return token_type::identifier;
     }
-    bool match = std::strncmp(identifier + 1, entry.keyword + 1, size) == 0;
+    bool comparison = std::strncmp(identifier + 1, entry.keyword + 1, size);
 
-    if (match) {
+    if (comparison == 0) {
         return entry.type;
     } else {
         return token_type::identifier;
     }
+
 }
 }

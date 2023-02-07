@@ -50,6 +50,7 @@ struct table_strategy {
     hash_strategy hasher;
     string_compare_strategy string_compare;
     bool inline_hash;
+    bool cmov;
 };
 
 struct keyword_statistics {
@@ -400,31 +401,53 @@ token_type look_up_identifier(const char* identifier, std::size_t size) noexcept
     if (entry.keyword[0] != identifier[0]) {
         return token_type::identifier;
     }
-    bool match = std::strncmp(identifier + 1, entry.keyword + 1, size) == 0;
+    bool comparison = std::strncmp(identifier + 1, entry.keyword + 1, size);
 )");
             break;
         case string_compare_strategy::strncmp:
             std::fprintf(file, "%s", R"(
-    bool match = std::strncmp(identifier, entry.keyword, size) == 0;
+    int comparison = std::strncmp(identifier, entry.keyword, size);
 )");
             break;
         case string_compare_strategy::cmpestri:
             std::fprintf(file, "%s", R"(
-    bool match = _mm_cmpestri(
+    int comparison = _mm_cmpestri(
         ::_mm_loadu_si32(identifier),
         size,
         ::_mm_loadu_si32(entry.keyword),
         size,
-        _SIDD_UBYTE_OPS | _SIDD_CMP_EQUAL_EACH | _SIDD_LEAST_SIGNIFICANT) == 0;
+        _SIDD_UBYTE_OPS | _SIDD_CMP_EQUAL_EACH | _SIDD_LEAST_SIGNIFICANT);
 )");
             break;
     }
-    std::fprintf(file, "%s", R"(
-    if (match) {
+    if (table.strategy.cmov) {
+        std::fprintf(file, "%s", R"(
+    int result;
+    static_assert(sizeof(token_type) == 1, "If this assertion fails, change movzbl below.");
+    int temp;
+    __asm__ (
+        "test %[comparison], %[comparison]\n"
+        "movzbl %[entry_token_type], %[temp]\n"
+        "movl %[token_type_identifier], %[result]\n"
+        "cmove %[temp], %[result]\n"
+        : [result]"=r"(result), [temp]"=&r"(temp)
+        : [comparison]"r"(comparison),
+          [entry_token_type]"m"(entry.type),
+          [token_type_identifier]"i"(token_type::identifier)
+        : "cc"
+    );
+    return (token_type)result;
+)");
+    } else {
+        std::fprintf(file, "%s", R"(
+    if (comparison == 0) {
         return entry.type;
     } else {
         return token_type::identifier;
     }
+)");
+    }
+    std::fprintf(file, "%s", R"(
 }
 }
 )");
@@ -448,12 +471,14 @@ void go(int argc, char** argv) {
         {"output",         required_argument, 0, 'o' },
         {"string-compare", required_argument, 0, 's' },
         {"table-size",     required_argument, 0, 't' },
+        {"cmov",           no_argument,       0, 'C' },
         {"inline-hash",    no_argument,       0, 'i' },
         {nullptr,          0,                 0, 0   }
     };
 
     const char* out_file_path = nullptr;
     bool inline_hash = false;
+    bool cmov = false;
     string_compare_strategy string_compare = string_compare_strategy::strncmp;
     std::optional<table_size_strategy> size_strategy;
     std::optional<character_selection_mask> character_selection;
@@ -463,6 +488,10 @@ void go(int argc, char** argv) {
         int long_index = 0;
         int opt = getopt_long_only(argc, argv, "", long_options, &long_index);
         switch (opt) {
+            case 'C':
+                cmov = true;
+                break;
+
             case 'c': {
                 character_selection.emplace();
                 const char* optarg_end = optarg + std::strlen(optarg);
@@ -551,6 +580,7 @@ done_parsing:
         .hasher = *hasher,
         .string_compare = string_compare,
         .inline_hash = inline_hash,
+        .cmov = cmov,
     };
 
     keyword_statistics stats = make_stats();
