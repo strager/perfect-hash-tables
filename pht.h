@@ -18,8 +18,8 @@
 namespace pht {
 // if (1<<0) is set: s[0]
 // if (1<<1) is set: s[1]
-// if (1<<2) is set: s[size-1]
-// if (1<<3) is set: s[size-2]
+// if (1<<2) is set: s[size-2]
+// if (1<<3) is set: s[size-1]
 // if (1<<4) is set: size
 using character_selection_mask = std::uint8_t;
 
@@ -241,8 +241,8 @@ inline constexpr void hash_selected_characters(character_selection_mask mask, Ha
             dword |= w << (i * 8);
             i += 2;
         } else {
-            if (mask & (1 << 2)) { dword |= (std::uint32_t)(std::uint8_t)s[size - 1] << (i * 8); i += 1; }
-            if (mask & (1 << 3)) { dword |= (std::uint32_t)(std::uint8_t)s[size - 2] << (i * 8); i += 1; }
+            if (mask & (1 << 2)) { dword |= (std::uint32_t)(std::uint8_t)s[size - 2] << (i * 8); i += 1; }
+            if (mask & (1 << 3)) { dword |= (std::uint32_t)(std::uint8_t)s[size - 1] << (i * 8); i += 1; }
         }
 
         if (mask & (1 << 4)) { dword |= (std::uint32_t)(std::uint8_t)size << (i * 8); i += 1; }
@@ -268,13 +268,13 @@ inline constexpr void hash_selected_characters(character_selection_mask mask, Ha
             std::memcpy(&bytes[i], &s[size-2], 2);
             i += 2;
         } else {
-            if (mask & (1 << 2)) bytes[i++] = (std::uint8_t)s[size - 1];
-            if (mask & (1 << 3)) bytes[i++] = (std::uint8_t)s[size - 2];
+            if (mask & (1 << 2)) bytes[i++] = (std::uint8_t)s[size - 2];
+            if (mask & (1 << 3)) bytes[i++] = (std::uint8_t)s[size - 1];
         }
 
         if (mask & (1 << 4)) bytes[i++] = (std::uint8_t)size;
 
-        hasher.bytes(bytes.data(), bytes.size());
+        hasher.bytes(bytes.data(), i);
     }
 }
 }
