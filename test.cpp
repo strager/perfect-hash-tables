@@ -12,7 +12,7 @@ namespace pht {
 namespace {
 void test_look_up_identifier(const char* name, look_up_identifier_f* look_up_identifier) {
     struct test_case {
-        char identifier[20];
+        char identifier[20 + padding_bytes];
         token_type expected;
     };
 

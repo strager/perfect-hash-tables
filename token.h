@@ -8,6 +8,8 @@
 #include <string_view>
 
 namespace pht {
+constexpr int padding_bytes = 32;
+
 enum class token_type : std::uint8_t {
   kw_abstract,
   kw_any,

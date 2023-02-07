@@ -4,6 +4,7 @@
 #ifndef PERFECT_HASH_TABLES_FILE_H
 #define PERFECT_HASH_TABLES_FILE_H
 
+#include "token.h"
 #include <cerrno>
 #include <cstddef>
 #include <cstdio>
@@ -12,7 +13,7 @@
 #include <vector>
 
 namespace pht {
-// Includes a null terminator.
+// Includes padding_bytes null terminators.
 inline std::vector<char> read_file(const char* file_path) {
     FILE* file = std::fopen(file_path, "rb");
     if (file == nullptr) {
@@ -35,7 +36,7 @@ inline std::vector<char> read_file(const char* file_path) {
         result.resize(old_size + rc);
         std::memcpy(result.data() + old_size, buffer, rc);
     }
-    result.push_back('\0');
+    result.resize(result.size() + padding_bytes);
 
     std::fclose(file);
 
