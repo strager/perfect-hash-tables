@@ -6,6 +6,7 @@ clang_CXX = ~/Toolchains/clang-stage2/bin/clang++
 extra_test_LDFLAGS = -Wl,--undefined=look_up_identifier
 extra_CXXFLAGS = -std=c++20 -g -O3 -fvisibility=hidden -fPIC \
 	-I ~/tmp/Projects/xxhash/ -DXXH_INLINE_ALL \
+	-I ~/tmp/Projects/frozen/include/ \
 	-msse4 -fcf-protection=full
 
 gperf_combinations = \
@@ -57,6 +58,7 @@ pht_sos = $(foreach flags,$(pht_combinations),build/pht$(subst =,-,$(flags)).so 
 pht_cpps = $(foreach flags,$(pht_combinations),generated/pht$(subst =,-,$(flags)).cpp)
 
 custom_combinations = \
+	frozen-unordered-map \
 	linear-packed-sized \
 	linear-packed-z \
 	std-unordered-map

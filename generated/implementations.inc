@@ -74,6 +74,8 @@
 "./build/pht--table-size-small_--characters-27_--hasher-icrc32_--check-first-clang.so",
 "./build/pht--table-size-small_--characters-29_--hasher-icrc32_--check-first.so",
 "./build/pht--table-size-small_--characters-29_--hasher-icrc32_--check-first-clang.so",
+"./build/frozen-unordered-map.so",
+"./build/frozen-unordered-map-clang.so",
 "./build/linear-packed-sized.so",
 "./build/linear-packed-sized-clang.so",
 "./build/linear-packed-z.so",
