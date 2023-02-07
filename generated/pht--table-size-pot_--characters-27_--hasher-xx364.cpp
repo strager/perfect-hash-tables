@@ -8,7 +8,7 @@
 namespace pht {
 namespace {
 constexpr character_selection_mask character_selection = 27U;
-constexpr std::uint32_t hash_basis = 2166182962UL;
+constexpr std::uint32_t hash_seed = 2166182962UL;
 constexpr std::uint32_t table_size = 256UL;
 constexpr std::size_t min_keyword_size = 2;
 constexpr std::size_t max_keyword_size = 11;
@@ -286,7 +286,7 @@ token_type look_up_identifier(const char* identifier, std::size_t size) noexcept
         return token_type::identifier;
     }
 
-    xx3_64_hasher hasher(hash_basis);
+    xx3_64_hasher hasher(hash_seed);
     hash_selected_characters(character_selection, hasher, identifier, size);
     std::uint32_t h = hasher.hash();
     std::uint32_t index = h % table_size;

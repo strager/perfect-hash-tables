@@ -48,6 +48,18 @@ struct keyword_statistics {
     std::vector<character_selection_mask> unique_character_selections;
 };
 
+struct table_seed {
+    void next() {
+        this->data += 1;
+    }
+
+    unsigned long get_32() const {
+        return this->data;
+    }
+
+    unsigned long data = 0x811c9dc5; // FNV-1a 32-bit basis.
+};
+
 struct perfect_hash_table {
     struct table_entry {
         std::string_view keyword = std::string_view();
@@ -55,7 +67,7 @@ struct perfect_hash_table {
     };
 
     keyword_statistics stats;
-    unsigned long hash_basis;
+    table_seed seed;
     unsigned long table_size;
     table_strategy strategy;
 
@@ -73,7 +85,7 @@ bool try_add_all_entries(perfect_hash_table& table) {
         std::uint32_t index;
     };
     auto make_hash_and_index = [&table](keyword_token kt) -> hash_and_index {
-        Hasher hasher(table.hash_basis);
+        Hasher hasher(table.seed.get_32());
         hash_selected_characters(table.strategy.character_selection, hasher, kt.keyword.data(), kt.keyword.size());
         std::uint32_t h = hasher.hash();
         std::uint32_t index = h % table.table_size;
@@ -137,7 +149,7 @@ bool try_add_all_entries(perfect_hash_table& table, hash_strategy hasher) {
 // table failed.
 [[gnu::noinline]]
 int try_build_table(perfect_hash_table& table, int max_attempts) {
-    table.hash_basis = 0x811c9dc5; // FNV-1a 32-bit basis.
+    table.seed = table_seed();
     int attempts = 0;
     for (;;) {
         attempts += 1;
@@ -148,7 +160,7 @@ int try_build_table(perfect_hash_table& table, int max_attempts) {
         if (succeeded) {
             return attempts;
         }
-        table.hash_basis += 1;
+        table.seed.next();
     }
 }
 
@@ -251,12 +263,12 @@ void write_table(const char* file_path, const perfect_hash_table& table) {
 namespace pht {
 namespace {
 constexpr character_selection_mask character_selection = %uU;
-constexpr std::uint32_t hash_basis = %luUL;
+constexpr std::uint32_t hash_seed = %luUL;
 constexpr std::uint32_t table_size = %luUL;
 constexpr std::size_t min_keyword_size = %lu;
 constexpr std::size_t max_keyword_size = %lu;
 
-)", table.strategy.character_selection, table.hash_basis, table.table_size, table.stats.min_keyword_size, table.stats.max_keyword_size);
+)", table.strategy.character_selection, table.seed.get_32(), table.table_size, table.stats.min_keyword_size, table.stats.max_keyword_size);
 
     std::fprintf(file, "%s", R"(
 struct table_entry {
@@ -306,7 +318,7 @@ token_type look_up_identifier(const char* identifier, std::size_t size) noexcept
         return token_type::identifier;
     }
 
-    %s hasher(hash_basis);
+    %s hasher(hash_seed);
     hash_selected_characters(character_selection, hasher, identifier, size);
     std::uint32_t h = hasher.hash();
     std::uint32_t index = h %% table_size;
