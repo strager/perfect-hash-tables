@@ -39,9 +39,13 @@
 
 namespace pht {
 namespace {
+constexpr int max_keyword_length = 11;
+
 struct keyword_entry {
 #if GPERF_PIC
   int string;
+#elif GPERF_INLINE
+  char string[max_keyword_length + 1];
 #else
   const char* string;
 #endif

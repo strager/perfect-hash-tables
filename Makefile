@@ -20,6 +20,8 @@ gperf_combinations = \
 	--pic_--seven-bit \
 	--compare-lengths_--readonly-tables \
 	--compare-lengths_--seven-bit \
+	--inline-strings \
+	--inline-strings_--compare-lengths
 
 gperf_sos = $(foreach flags,$(gperf_combinations),build/gperf$(flags).so build/gperf$(flags)-clang.so)
 gperf_cpps = $(foreach flags,$(gperf_combinations),generated/gperf$(flags).cpp)
@@ -151,9 +153,13 @@ ifeq ($(findstring --pic,$(flags)), --pic)
 build/gperf$(flags).so: extra_gperf_CXXFLAGS = -DGPERF_PIC
 build/gperf$(flags)-clang.so: extra_gperf_CXXFLAGS = -DGPERF_PIC
 endif
+ifeq ($(findstring --inline-strings,$(flags)), --inline-strings)
+build/gperf$(flags).so: extra_gperf_CXXFLAGS = -DGPERF_INLINE
+build/gperf$(flags)-clang.so: extra_gperf_CXXFLAGS = -DGPERF_INLINE
+endif
 
 generated/gperf$(flags).cpp: token.gperf Makefile generated/stamp
-	set -e -o pipefail ; gperf $(subst _, ,$(flags)) $$(<) | sed -e '/^#line/d' >$$(@)
+	set -e -o pipefail ; gperf $(subst --inline-strings,,$(subst _, ,$(flags))) $$(<) | sed -e '/^#line/d' >$$(@)
 endef
 $(foreach flags,$(gperf_combinations),$(eval $(call make_gperf_so)))
 
