@@ -75,6 +75,10 @@ pht_combinations = \
 	--table-size=pot_--characters=23_--hasher=aes \
 	--table-size=pot_--characters=27_--hasher=aes \
 	--table-size=pot_--characters=29_--hasher=aes \
+	--table-size=pot_--characters=15_--hasher=aes_--entry-size=16 \
+	--table-size=pot_--characters=23_--hasher=aes_--entry-size=16 \
+	--table-size=pot_--characters=27_--hasher=aes_--entry-size=16 \
+	--table-size=pot_--characters=29_--hasher=aes_--entry-size=16 \
 	--table-size=pot_--characters=15_--hasher=aes_--shiftless-index_--entry-size=16 \
 	--table-size=pot_--characters=23_--hasher=aes_--shiftless-index_--entry-size=16 \
 	--table-size=pot_--characters=27_--hasher=aes_--shiftless-index_--entry-size=16 \
