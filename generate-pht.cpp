@@ -353,7 +353,7 @@ struct table_entry {
     std::uint32_t hash;
 )");
     }
-    bool need_null_terminator = table.strategy.string_compare != string_compare_strategy::cmpestri;
+    bool need_null_terminator = true;
     std::fprintf(file, R"(
     const char keyword[max_keyword_size + %d];
     token_type type;
@@ -469,11 +469,15 @@ token_type look_up_identifier(const char* identifier, std::size_t size) noexcept
         case string_compare_strategy::cmpestri:
             std::fprintf(file, "%s", R"(
     int comparison = _mm_cmpestri(
-        ::_mm_loadu_si32(identifier),
+        ::_mm_lddqu_si128((const __m128i*)identifier),
         size,
-        ::_mm_loadu_si32(entry.keyword),
+        ::_mm_lddqu_si128((const __m128i*)entry.keyword),
         size,
-        _SIDD_UBYTE_OPS | _SIDD_CMP_EQUAL_EACH | _SIDD_LEAST_SIGNIFICANT);
+        _SIDD_UBYTE_OPS | _SIDD_CMP_EQUAL_EACH | _SIDD_NEGATIVE_POLARITY | _SIDD_LEAST_SIGNIFICANT)
+        - 16;
+    if (comparison == 0) {
+        comparison = entry.keyword[size];  // length check
+    }
 )");
             break;
     }
