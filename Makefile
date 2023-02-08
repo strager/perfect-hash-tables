@@ -47,10 +47,6 @@ pht_combinations = \
 	--table-size=small_--characters=23_--hasher=icrc32 \
 	--table-size=small_--characters=27_--hasher=icrc32 \
 	--table-size=small_--characters=29_--hasher=icrc32 \
-	--table-size=pot_--characters=15_--hasher=icrc32_--shiftless-index_--entry-size=16 \
-	--table-size=pot_--characters=23_--hasher=icrc32_--shiftless-index_--entry-size=16 \
-	--table-size=pot_--characters=27_--hasher=icrc32_--shiftless-index_--entry-size=16 \
-	--table-size=pot_--characters=29_--hasher=icrc32_--shiftless-index_--entry-size=16 \
 	--table-size=small_--characters=15_--hasher=icrc32_--inline-hash \
 	--table-size=small_--characters=23_--hasher=icrc32_--inline-hash \
 	--table-size=small_--characters=27_--hasher=icrc32_--inline-hash \
@@ -76,13 +72,7 @@ pht_combinations = \
 	--table-size=pot_--characters=27_--hasher=aes \
 	--table-size=pot_--characters=29_--hasher=aes \
 	--table-size=pot_--characters=15_--hasher=aes_--entry-size=16 \
-	--table-size=pot_--characters=23_--hasher=aes_--entry-size=16 \
-	--table-size=pot_--characters=27_--hasher=aes_--entry-size=16 \
-	--table-size=pot_--characters=29_--hasher=aes_--entry-size=16 \
 	--table-size=pot_--characters=15_--hasher=aes_--shiftless-index_--entry-size=16 \
-	--table-size=pot_--characters=23_--hasher=aes_--shiftless-index_--entry-size=16 \
-	--table-size=pot_--characters=27_--hasher=aes_--shiftless-index_--entry-size=16 \
-	--table-size=pot_--characters=29_--hasher=aes_--shiftless-index_--entry-size=16 \
 	--characters=15_--hasher=pearson8
 
 pht_sos = $(foreach flags,$(pht_combinations),build/pht$(subst =,-,$(flags)).so build/pht$(subst =,-,$(flags))-clang.so)
