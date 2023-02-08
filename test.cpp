@@ -29,21 +29,26 @@ void test_look_up_identifier(const char* name, look_up_identifier_f* look_up_ide
     };
 
     bool ok = true;
-    for (const test_case& test : test_cases) {
-        std::size_t length = std::strlen(test.identifier);
-        token_type actual = look_up_identifier(test.identifier, length);
-        if (actual != test.expected) {
+    auto check = [&](const char* identifier, std::size_t length, token_type expected) {
+        token_type actual = look_up_identifier(identifier, length);
+        if (actual != expected) {
             std::fprintf(
                 stderr,
                 "FAIL: %s: expected look_up_identifier(\"%s\", %zu) = %d, but got %d\n",
                 name,
-                test.identifier,
+                identifier,
                 length,
-                (int) test.expected,
+                (int) expected,
                 (int) actual);
             ok = false;
         }
+    };
+
+    for (const test_case& test : test_cases) {
+        std::size_t length = std::strlen(test.identifier);
+        check(test.identifier, length, test.expected);
     }
+
     if (!ok) {
         std::exit(1);
     }
