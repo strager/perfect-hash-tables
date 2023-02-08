@@ -110,6 +110,8 @@
 "./build/pht--table-size-pot_--characters-27_--hasher-aes-clang.so",
 "./build/pht--table-size-pot_--characters-29_--hasher-aes.so",
 "./build/pht--table-size-pot_--characters-29_--hasher-aes-clang.so",
+"./build/pht--table-size-pot_--characters-15_--hasher-aes_--shiftless-index.so",
+"./build/pht--table-size-pot_--characters-15_--hasher-aes_--shiftless-index-clang.so",
 "./build/pht--characters-15_--hasher-pearson8.so",
 "./build/pht--characters-15_--hasher-pearson8-clang.so",
 "./build/frozen-unordered-map.so",

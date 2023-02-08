@@ -353,6 +353,21 @@ inline constexpr void hash_selected_characters(character_selection_mask mask, Ha
         hasher.bytes(bytes.data(), i);
     }
 }
+
+enum class hash_to_index_strategy {
+    modulo,
+    shiftless,  // Requires power of 2 table size.
+};
+
+inline std::uint32_t hash_to_index(std::uint32_t hash, std::uint32_t table_size, std::uint32_t entry_size, hash_to_index_strategy strategy) {
+    switch (strategy) {
+        case hash_to_index_strategy::modulo:
+            return hash % table_size;
+        case hash_to_index_strategy::shiftless:
+            return hash % (table_size * entry_size) / entry_size;
+    }
+    __builtin_unreachable();
+}
 }
 
 #endif

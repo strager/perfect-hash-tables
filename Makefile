@@ -71,6 +71,7 @@ pht_combinations = \
 	--table-size=pot_--characters=23_--hasher=aes \
 	--table-size=pot_--characters=27_--hasher=aes \
 	--table-size=pot_--characters=29_--hasher=aes \
+	--table-size=pot_--characters=15_--hasher=aes_--shiftless-index \
 	--characters=15_--hasher=pearson8
 
 pht_sos = $(foreach flags,$(pht_combinations),build/pht$(subst =,-,$(flags)).so build/pht$(subst =,-,$(flags))-clang.so)

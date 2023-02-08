@@ -7,7 +7,6 @@
 * check length
 * move string data out of line
 * early exit if not 'a'..'z'
-* take middle bits of hash instead of last bits (power-of-two tables)
 
 ## gperf (stock) vs gperf --compare-lengths
 

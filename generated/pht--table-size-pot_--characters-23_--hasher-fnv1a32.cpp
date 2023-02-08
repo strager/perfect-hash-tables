@@ -1058,7 +1058,7 @@ token_type look_up_identifier(const char* identifier, std::size_t size) noexcept
     fnv1a32 hasher(hash_seed);
     hash_selected_characters(character_selection, hasher, identifier, size);
     std::uint32_t h = hasher.hash();
-    std::uint32_t index = h & 1023;
+    std::uint32_t index = hash_to_index(h, table_size, sizeof(table_entry), hash_to_index_strategy::modulo);
     const table_entry& entry = table[index];
 
     int comparison = std::strncmp(identifier, entry.keyword, size);

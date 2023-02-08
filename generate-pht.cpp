@@ -49,6 +49,7 @@ struct table_strategy {
     character_selection_mask character_selection;
     hash_strategy hasher;
     string_compare_strategy string_compare;
+    hash_to_index_strategy hash_to_index;
     bool inline_hash;
     bool cmov;
 };
@@ -115,6 +116,8 @@ struct perfect_hash_table {
     table_seed seed;
     unsigned long table_size;
     table_strategy strategy;
+    unsigned entry_size;
+    unsigned entry_padding;
     int generation;
 
     std::vector<table_entry> entries;
@@ -137,7 +140,7 @@ bool try_add_all_entries(perfect_hash_table& table) {
         Hasher& hasher = *optional_hasher;
         hash_selected_characters(table.strategy.character_selection, hasher, kt.keyword.data(), kt.keyword.size());
         std::uint32_t h = hasher.hash();
-        std::uint32_t index = h % table.table_size;
+        std::uint32_t index = hash_to_index(h, table.table_size, table.entry_size, table.strategy.hash_to_index);
         return hash_and_index{
             .hash = h,
             .index = index,
@@ -257,6 +260,14 @@ perfect_hash_table make_perfect_hash_table(const keyword_statistics& stats, tabl
 
     table.strategy = strategy;
 
+    // TODO(strager): Properly compute this. This is only correct sometimes.
+    unsigned stock_entry_size = 13;
+    table.entry_size = stock_entry_size;
+    if (table.strategy.hash_to_index == hash_to_index_strategy::shiftless) {
+        table.entry_size = 16;
+    }
+    table.entry_padding = table.entry_size - stock_entry_size;
+
     unsigned long max_table_size = std::size(keyword_tokens) * 65536;
     switch (strategy.size_strategy) {
         case table_size_strategy::smallest:
@@ -348,10 +359,19 @@ struct table_entry {
     std::fprintf(file, R"(
     const char keyword[max_keyword_size + %d];
     token_type type;
-};
-
-constexpr table_entry table[table_size] = {
 )", need_null_terminator ? 1 : 0);
+    if (table.entry_padding > 0) {
+        std::fprintf(file, "    char padding[%u];\n", table.entry_padding);
+    }
+    std::fprintf(file, "};\n");
+    // TODO(strager): Always add this static_assert.
+    if (table.strategy.hash_to_index == hash_to_index_strategy::shiftless) {
+        std::fprintf(file, "static_assert(sizeof(table_entry) == %u);\n", table.entry_size);
+    }
+
+    std::fprintf(file, R"(
+constexpr table_entry table[table_size] = {
+)");
 
     for (const perfect_hash_table::table_entry& entry : table.entries) {
         std::fprintf(file, "  {");
@@ -394,6 +414,11 @@ constexpr table_entry table[table_size] = {
         case hash_strategy::pearson_8: hasher_class = "pearson_8_hasher"; break;
         case hash_strategy::aes: hasher_class = "aes_intrinsic_hasher"; break;
     }
+    const char* hash_to_index;
+    switch (table.strategy.hash_to_index) {
+        case hash_to_index_strategy::modulo: hash_to_index = "modulo"; break;
+        case hash_to_index_strategy::shiftless: hash_to_index = "shiftless"; break;
+    }
     std::fprintf(file, R"(
 };
 }
@@ -406,12 +431,8 @@ token_type look_up_identifier(const char* identifier, std::size_t size) noexcept
     %s hasher(hash_seed);
     hash_selected_characters(character_selection, hasher, identifier, size);
     std::uint32_t h = hasher.hash();
-)", hasher_class);
-    if (std::has_single_bit(table.table_size)) {
-        std::fprintf(file, "    std::uint32_t index = h & %lu;\n", table.table_size - 1);
-    } else {
-        std::fprintf(file, "%s", "    std::uint32_t index = h % table_size;\n");
-    }
+    std::uint32_t index = hash_to_index(h, table_size, sizeof(table_entry), hash_to_index_strategy::%s);
+)", hasher_class, hash_to_index);
     std::fprintf(file, "    const table_entry& entry = table[index];\n");
     if (table.strategy.inline_hash) {
         std::fprintf(file, "%s", R"(
@@ -501,19 +522,21 @@ void go(int argc, char** argv) {
     };
 
     static constexpr ::option long_options[] = {
-        {"characters",     required_argument, 0, 'c' },
-        {"hasher",         required_argument, 0, 'h' },
-        {"output",         required_argument, 0, 'o' },
-        {"string-compare", required_argument, 0, 's' },
-        {"table-size",     required_argument, 0, 't' },
-        {"cmov",           no_argument,       0, 'C' },
-        {"inline-hash",    no_argument,       0, 'i' },
-        {nullptr,          0,                 0, 0   }
+        {"characters",      required_argument, 0, 'c' },
+        {"hasher",          required_argument, 0, 'h' },
+        {"output",          required_argument, 0, 'o' },
+        {"string-compare",  required_argument, 0, 's' },
+        {"table-size",      required_argument, 0, 't' },
+        {"cmov",            no_argument,       0, 'C' },
+        {"inline-hash",     no_argument,       0, 'i' },
+        {"shiftless-index", no_argument,       0, 'l' },
+        {nullptr,           0,                 0, 0   }
     };
 
     const char* out_file_path = nullptr;
     bool inline_hash = false;
     bool cmov = false;
+    hash_to_index_strategy hash_to_index = hash_to_index_strategy::modulo;
     string_compare_strategy string_compare = string_compare_strategy::strncmp;
     std::optional<table_size_strategy> size_strategy;
     std::optional<character_selection_mask> character_selection;
@@ -552,6 +575,10 @@ void go(int argc, char** argv) {
 
             case 'i':
                 inline_hash = true;
+                break;
+
+            case 'l':
+                hash_to_index = hash_to_index_strategy::shiftless;
                 break;
 
             case 's':
@@ -609,11 +636,17 @@ done_parsing:
         }
     }
 
+    if (hash_to_index == hash_to_index_strategy::shiftless && size_strategy != table_size_strategy::power_of_2) {
+        std::fprintf(stderr, "error: --shiftless-index requires --table-size=pot\n");
+        std::exit(1);
+    }
+
     table_strategy strategy = {
         .size_strategy = *size_strategy,
         .character_selection = *character_selection,
         .hasher = *hasher,
         .string_compare = string_compare,
+        .hash_to_index = hash_to_index,
         .inline_hash = inline_hash,
         .cmov = cmov,
     };
