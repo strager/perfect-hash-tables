@@ -50,6 +50,7 @@ struct table_strategy {
     hash_strategy hasher;
     string_compare_strategy string_compare;
     hash_to_index_strategy hash_to_index;
+    std::optional<unsigned> entry_size;
     bool inline_hash;
     bool cmov;
 };
@@ -262,10 +263,7 @@ perfect_hash_table make_perfect_hash_table(const keyword_statistics& stats, tabl
 
     // TODO(strager): Properly compute this. This is only correct sometimes.
     unsigned stock_entry_size = 13;
-    table.entry_size = stock_entry_size;
-    if (table.strategy.hash_to_index == hash_to_index_strategy::shiftless) {
-        table.entry_size = 16;
-    }
+    table.entry_size = strategy.entry_size.has_value() ? *strategy.entry_size : stock_entry_size;
     table.entry_padding = table.entry_size - stock_entry_size;
 
     unsigned long max_table_size = std::size(keyword_tokens) * 65536;
@@ -365,7 +363,7 @@ struct table_entry {
     }
     std::fprintf(file, "};\n");
     // TODO(strager): Always add this static_assert.
-    if (table.strategy.hash_to_index == hash_to_index_strategy::shiftless) {
+    if (table.strategy.entry_size.has_value()) {
         std::fprintf(file, "static_assert(sizeof(table_entry) == %u);\n", table.entry_size);
     }
 
@@ -523,6 +521,7 @@ void go(int argc, char** argv) {
 
     static constexpr ::option long_options[] = {
         {"characters",      required_argument, 0, 'c' },
+        {"entry-size",      required_argument, 0, 'z' },
         {"hasher",          required_argument, 0, 'h' },
         {"output",          required_argument, 0, 'o' },
         {"string-compare",  required_argument, 0, 's' },
@@ -541,6 +540,7 @@ void go(int argc, char** argv) {
     std::optional<table_size_strategy> size_strategy;
     std::optional<character_selection_mask> character_selection;
     std::optional<hash_strategy> hasher;
+    std::optional<unsigned> entry_size;
 
     for (;;) {
         int long_index = 0;
@@ -556,6 +556,17 @@ void go(int argc, char** argv) {
                 std::from_chars_result r = std::from_chars(optarg, optarg_end, *character_selection);
                 if (r.ptr != optarg_end || r.ec != std::errc()) {
                     std::fprintf(stderr, "error: cannot parse character selection: %s", optarg);
+                    std::exit(1);
+                }
+                break;
+            }
+
+            case 'z': {
+                entry_size.emplace();
+                const char* optarg_end = optarg + std::strlen(optarg);
+                std::from_chars_result r = std::from_chars(optarg, optarg_end, *entry_size);
+                if (r.ptr != optarg_end || r.ec != std::errc()) {
+                    std::fprintf(stderr, "error: cannot parse entry size: %s", optarg);
                     std::exit(1);
                 }
                 break;
@@ -647,6 +658,7 @@ done_parsing:
         .hasher = *hasher,
         .string_compare = string_compare,
         .hash_to_index = hash_to_index,
+        .entry_size = entry_size,
         .inline_hash = inline_hash,
         .cmov = cmov,
     };
