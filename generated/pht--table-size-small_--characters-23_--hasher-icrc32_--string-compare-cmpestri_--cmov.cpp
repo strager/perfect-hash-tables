@@ -285,13 +285,6 @@ token_type look_up_identifier(const char* identifier, std::size_t size) noexcept
 
     int result = (int)entry.type;
     __asm__(
-        // Compare the entry.keyword and identifier strings.
-        // %eax: size of %[entry_keyword].
-        // %edx: size of %[identifier].
-        "pcmpestrm %[cmpestrm_flags], %[entry_keyword], %[identifier]\n"
-        // Move if cmpestr's mask was non-zero.
-        "cmovc %[token_type_identifier], %[result]\n"
-
         // If what should be the null terminator is not null, then
         // (size != strlen(entry.keyword)), so set result to
         // token_type::identifier.
@@ -300,15 +293,30 @@ token_type look_up_identifier(const char* identifier, std::size_t size) noexcept
 
         : [result]"+r"(result)
 
+        : [entry_keyword_at_size]"m"(entry.keyword[size]),
+          [token_type_identifier]"r"((int)token_type::identifier)
+
+        : "cc"   // Clobbered by pcmpestrm and cmp.
+    );
+
+    __asm__(
+        // Compare the entry.keyword and identifier strings.
+        // %eax: size of %[entry_keyword].
+        // %edx: size of %[identifier].
+        "pcmpestrm %[cmpestrm_flags], %[entry_keyword], %[identifier]\n"
+        // Move if cmpestr's mask was non-zero.
+        "cmovc %[token_type_identifier], %[result]\n"
+
+        : [result]"+r"(result)
+
         : [identifier]"x"(::_mm_lddqu_si128((const __m128i*)identifier)),
           [entry_keyword]"x"(::_mm_lddqu_si128((const __m128i*)entry.keyword)),
-          [entry_keyword_at_size]"m"(entry.keyword[size]),
           [token_type_identifier]"r"((int)token_type::identifier),
           [cmpestrm_flags]"i"(_SIDD_UBYTE_OPS | _SIDD_CMP_EQUAL_EACH | _SIDD_NEGATIVE_POLARITY),
           "a"(size), // %eax: size of %[entry_keyword].
           "d"(size)  // %edx: size of %[identifier].
 
-        : "cc",   // Clobbered by pcmpestrm and cmp.
+        : "cc",   // Clobbered by pcmpestrm.
           "xmm0"  // Clobbered by pcmpestrm.
     );
     return (token_type)result;
