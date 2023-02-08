@@ -292,31 +292,33 @@ token_type look_up_identifier(const char* identifier, std::size_t size) noexcept
     std::uint32_t index = hash_to_index(h, table_size, sizeof(table_entry), hash_to_index_strategy::modulo);
     const table_entry& entry = table[index];
 
-    int comparison = _mm_cmpestri(
-        ::_mm_lddqu_si128((const __m128i*)identifier),
-        size,
-        ::_mm_lddqu_si128((const __m128i*)entry.keyword),
-        size,
-        _SIDD_UBYTE_OPS | _SIDD_CMP_EQUAL_EACH | _SIDD_NEGATIVE_POLARITY | _SIDD_LEAST_SIGNIFICANT)
-        - 16;
+    int result = (int)entry.type;
+    __asm__(
+        // Compare the entry.keyword and identifier strings.
+        // %eax: size of %[entry_keyword].
+        // %edx: size of %[identifier].
+        "pcmpestrm %[cmpestrm_flags], %[entry_keyword], %[identifier]\n"
+        // Move if cmpestr's mask was non-zero.
+        "cmovc %[token_type_identifier], %[result]\n"
 
-    int comparison_1 = comparison;
-    int comparison_2 = entry.keyword[size];  // length check
+        // If what should be the null terminator is not null, then
+        // (size != strlen(entry.keyword)), so set result to
+        // token_type::identifier.
+        "cmpb $0, %[entry_keyword_at_size]\n"
+        "cmovne %[token_type_identifier], %[result]\n"
 
-    int result;
-    static_assert(sizeof(token_type) == 1, "If this assertion fails, change movzbl below.");
-    int temp;
-    __asm__ (
-        "or %[comparison_1], %[comparison_2]\n"
-        "movzbl %[entry_token_type], %[temp]\n"
-        "movl %[token_type_identifier], %[result]\n"
-        "cmove %[temp], %[result]\n"
-        : [result]"=r"(result), [temp]"=&r"(temp)
-        : [comparison_1]"r"(comparison_1),
-          [comparison_2]"r"(comparison_2),
-          [entry_token_type]"m"(entry.type),
-          [token_type_identifier]"i"(token_type::identifier)
-        : "cc"
+        : [result]"+r"(result)
+
+        : [identifier]"x"(::_mm_lddqu_si128((const __m128i*)identifier)),
+          [entry_keyword]"x"(::_mm_lddqu_si128((const __m128i*)entry.keyword)),
+          [entry_keyword_at_size]"m"(entry.keyword[size]),
+          [token_type_identifier]"r"((int)token_type::identifier),
+          [cmpestrm_flags]"i"(_SIDD_UBYTE_OPS | _SIDD_CMP_EQUAL_EACH | _SIDD_NEGATIVE_POLARITY),
+          "a"(size), // %eax: size of %[entry_keyword].
+          "d"(size)  // %edx: size of %[identifier].
+
+        : "cc",   // Clobbered by pcmpestrm and cmp.
+          "xmm0"  // Clobbered by pcmpestrm.
     );
     return (token_type)result;
 

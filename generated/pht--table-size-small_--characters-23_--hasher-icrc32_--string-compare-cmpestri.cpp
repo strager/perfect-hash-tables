@@ -283,14 +283,12 @@ token_type look_up_identifier(const char* identifier, std::size_t size) noexcept
     std::uint32_t index = hash_to_index(h, table_size, sizeof(table_entry), hash_to_index_strategy::modulo);
     const table_entry& entry = table[index];
 
-    int comparison = _mm_cmpestri(
+    int comparison = _mm_cmpestrc(
         ::_mm_lddqu_si128((const __m128i*)identifier),
         size,
         ::_mm_lddqu_si128((const __m128i*)entry.keyword),
         size,
-        _SIDD_UBYTE_OPS | _SIDD_CMP_EQUAL_EACH | _SIDD_NEGATIVE_POLARITY | _SIDD_LEAST_SIGNIFICANT)
-        - 16;
-
+        _SIDD_UBYTE_OPS | _SIDD_CMP_EQUAL_EACH | _SIDD_NEGATIVE_POLARITY);
     if (comparison == 0) {
         comparison = entry.keyword[size];  // length check
     }
