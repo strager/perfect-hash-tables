@@ -39,8 +39,8 @@ enum class hash_strategy {
 };
 
 enum class string_compare_strategy {
-    strncmp,
-    check_first_then_strncmp,
+    memcmp,
+    check_first_then_memcmp,
     cmpestri,
 };
 
@@ -371,6 +371,9 @@ struct table_entry {
 constexpr table_entry table[table_size] = {
 )");
 
+    int keyword_buffer_size = table.stats.max_keyword_size + (need_null_terminator ? 1 : 0);
+    std::vector<char> keyword_buffer;
+    keyword_buffer.resize(keyword_buffer_size);
     for (const perfect_hash_table::table_entry& entry : table.entries) {
         std::fprintf(file, "  {");
         if (!entry.is_taken(table.generation)) {
@@ -382,22 +385,26 @@ constexpr table_entry table[table_size] = {
             if (table.strategy.inline_hash) {
                 std::fprintf(file, "%luU, ", (unsigned long)entry.hash);
             }
-            if (!need_null_terminator && entry.keyword.size() == table.stats.max_keyword_size) {
-                // We can't use a string literal because a string literal forces
-                // a null terminator (but we don't have space for a null
-                // terminator). Write the string character-by-character instead.
-                std::fprintf(file, "{");
-                for (char c : entry.keyword) {
+
+            // Pad with non-zero bytes so our length checks work properly.
+            std::memset(keyword_buffer.data(), '_', keyword_buffer_size);
+            std::memcpy(keyword_buffer.data(), entry.keyword.data(), entry.keyword.size());
+            if (need_null_terminator) {
+                keyword_buffer[entry.keyword.size()] = '\0';
+            }
+
+            // Write the string character-by-character to avoid C++ adding a
+            // null terminator for us.
+            std::fprintf(file, "{");
+            for (char c : keyword_buffer) {
+                if (c == '\0') {
+                    std::fprintf(file, "0,");
+                } else {
                     std::fprintf(file, "'%c',", c);
                 }
-                std::fprintf(file, "}");
-            } else {
-                std::fprintf(
-                        file, "\"%.*s\"",
-                        (int)entry.keyword.size(), entry.keyword.data());
             }
             std::fprintf(
-                    file, ", token_type::kw_%*s},\n",
+                    file, "}, token_type::kw_%*s},\n",
                     (int)entry.keyword.size(), entry.keyword.data());
         }
     }
@@ -440,17 +447,23 @@ token_type look_up_identifier(const char* identifier, std::size_t size) noexcept
 )");
     }
     switch (table.strategy.string_compare) {
-        case string_compare_strategy::check_first_then_strncmp:
+        case string_compare_strategy::check_first_then_memcmp:
             std::fprintf(file, "%s", R"(
     if (entry.keyword[0] != identifier[0]) {
         return token_type::identifier;
     }
-    bool comparison = std::strncmp(identifier + 1, entry.keyword + 1, size - 1);
+    int comparison = std::memcmp(identifier + 1, entry.keyword + 1, size - 1);
+    if (comparison == 0) {
+        comparison = entry.keyword[size];  // length check
+    }
 )");
             break;
-        case string_compare_strategy::strncmp:
+        case string_compare_strategy::memcmp:
             std::fprintf(file, "%s", R"(
-    int comparison = std::strncmp(identifier, entry.keyword, size);
+    int comparison = std::memcmp(identifier, entry.keyword, size);
+    if (comparison == 0) {
+        comparison = entry.keyword[size];  // length check
+    }
 )");
             break;
         case string_compare_strategy::cmpestri:
@@ -536,7 +549,7 @@ void go(int argc, char** argv) {
     bool inline_hash = false;
     bool cmov = false;
     hash_to_index_strategy hash_to_index = hash_to_index_strategy::modulo;
-    string_compare_strategy string_compare = string_compare_strategy::strncmp;
+    string_compare_strategy string_compare = string_compare_strategy::memcmp;
     std::optional<table_size_strategy> size_strategy;
     std::optional<character_selection_mask> character_selection;
     std::optional<hash_strategy> hasher;
@@ -594,8 +607,8 @@ void go(int argc, char** argv) {
 
             case 's':
                 string_compare = look_up_or_die(optarg, "--string-compare", std::map<std::string_view, string_compare_strategy>{
-                    {"strncmp", string_compare_strategy::strncmp},
-                    {"check1strncmp", string_compare_strategy::check_first_then_strncmp},
+                    {"memcmp", string_compare_strategy::memcmp},
+                    {"check1memcmp", string_compare_strategy::check_first_then_memcmp},
                     {"cmpestri", string_compare_strategy::cmpestri},
                 });
                 break;
