@@ -286,6 +286,23 @@ constexpr table_entry table[table_size] = {
   {"", token_type::identifier},
 
 };
+
+constexpr std::uint8_t t = 0xff;
+constexpr std::uint8_t f = 0x00;
+constexpr std::uint8_t masks[max_keyword_size+1][16] = {
+    {f,f,f,f,f,f,f,f,f,f,f,f,f,f,f,f},
+    {t,f,f,f,f,f,f,f,f,f,f,f,f,f,f,f},
+    {t,t,f,f,f,f,f,f,f,f,f,f,f,f,f,f},
+    {t,t,t,f,f,f,f,f,f,f,f,f,f,f,f,f},
+    {t,t,t,t,f,f,f,f,f,f,f,f,f,f,f,f},
+    {t,t,t,t,t,f,f,f,f,f,f,f,f,f,f,f},
+    {t,t,t,t,t,t,f,f,f,f,f,f,f,f,f,f},
+    {t,t,t,t,t,t,t,f,f,f,f,f,f,f,f,f},
+    {t,t,t,t,t,t,t,t,f,f,f,f,f,f,f,f},
+    {t,t,t,t,t,t,t,t,t,f,f,f,f,f,f,f},
+    {t,t,t,t,t,t,t,t,t,t,f,f,f,f,f,f},
+    {t,t,t,t,t,t,t,t,t,t,t,f,f,f,f,f},
+};
 }
 
 token_type look_up_identifier(const char* identifier, std::size_t size) noexcept {
@@ -299,25 +316,13 @@ token_type look_up_identifier(const char* identifier, std::size_t size) noexcept
     std::uint32_t index = hash_to_index(h, table_size, sizeof(table_entry), hash_to_index_strategy::modulo);
     const table_entry& entry = table[index];
 
-    __m128i mask = ::_mm_setr_epi8(
-        size >=  1 ? 0xff : 0x00,
-        size >=  2 ? 0xff : 0x00,
-        size >=  3 ? 0xff : 0x00,
-        size >=  4 ? 0xff : 0x00,
-        size >=  5 ? 0xff : 0x00,
-        size >=  6 ? 0xff : 0x00,
-        size >=  7 ? 0xff : 0x00,
-        size >=  8 ? 0xff : 0x00,
-        size >=  9 ? 0xff : 0x00,
-        size >= 10 ? 0xff : 0x00,
-        size >= 11 ? 0xff : 0x00,
-        size >= 12 ? 0xff : 0x00,
-        size >= 13 ? 0xff : 0x00,
-        size >= 14 ? 0xff : 0x00,
-        size >= 15 ? 0xff : 0x00,
-        size >= 16 ? 0xff : 0x00);
-    __m128i entry_masked = ::_mm_and_si128(::_mm_lddqu_si128((const __m128i*)entry.keyword), mask);
-    __m128i identifier_masked = ::_mm_and_si128(::_mm_lddqu_si128((const __m128i*)identifier), mask);
+    __m128i mask = ::_mm_load_si128((const __m128i*)masks[size]);
+    __m128i entry_unmasked = ::_mm_lddqu_si128((const __m128i*)entry.keyword);
+    __m128i identifier_unmasked = ::_mm_lddqu_si128((const __m128i*)identifier);
+    __m128i entry_masked = ::_mm_and_si128(entry_unmasked, mask);
+    __m128i identifier_masked = ::_mm_and_si128(identifier_unmasked, mask);
+    // FIXME(strager): LLVM likes to optimize this to a 'ptest', breaking
+    // fairness. We should compile without -msse4.2.
     int comparison = ::_mm_movemask_epi8(::_mm_cmpeq_epi8(entry_masked, identifier_masked)) ^ 0xffff;
     if (comparison == 0) {
         comparison = entry.keyword[size];  // length check
