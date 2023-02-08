@@ -34,8 +34,9 @@ void test_look_up_identifier(const char* name, look_up_identifier_f* look_up_ide
         if (actual != expected) {
             std::fprintf(
                 stderr,
-                "FAIL: %s: expected look_up_identifier(\"%s\", %zu) = %d, but got %d\n",
+                "FAIL: %s: expected look_up_identifier(\"%.*s\", %zu) = %d, but got %d\n",
                 name,
+                (int) length,
                 identifier,
                 length,
                 (int) expected,
@@ -47,6 +48,23 @@ void test_look_up_identifier(const char* name, look_up_identifier_f* look_up_ide
     for (const test_case& test : test_cases) {
         std::size_t length = std::strlen(test.identifier);
         check(test.identifier, length, test.expected);
+    }
+
+    for (keyword_token kt : keyword_tokens) {
+        // If we add any byte to the end of the keyword, it should be recognized
+        // as an identifier. Except for 'assert' -> 'asserts'.
+        for (int i = 0; i < 256; ++i) {
+            char test_keyword[20 + padding_bytes];
+            std::strcpy(test_keyword, kt.keyword.data());
+            test_keyword[kt.keyword.size()] = i;
+            std::size_t test_keyword_size = kt.keyword.size() + 1;
+
+            token_type expected_type = token_type::identifier;
+            if (test_keyword_size == std::strlen("asserts") && std::memcmp(test_keyword, "asserts", test_keyword_size) == 0) {
+                expected_type = token_type::kw_asserts;
+            }
+            check(test_keyword, test_keyword_size, expected_type);
+        }
     }
 
     if (!ok) {
