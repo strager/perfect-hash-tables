@@ -42,6 +42,7 @@ enum class string_compare_strategy {
     memcmp,
     check_first_then_memcmp,
     cmpestri,
+    sse2,
 };
 
 struct table_strategy {
@@ -466,6 +467,33 @@ token_type look_up_identifier(const char* identifier, std::size_t size) noexcept
     }
 )");
             break;
+        case string_compare_strategy::sse2:
+                std::fprintf(file, "%s", R"(
+    __m128i mask = ::_mm_setr_epi8(
+        size >=  1 ? 0xff : 0x00,
+        size >=  2 ? 0xff : 0x00,
+        size >=  3 ? 0xff : 0x00,
+        size >=  4 ? 0xff : 0x00,
+        size >=  5 ? 0xff : 0x00,
+        size >=  6 ? 0xff : 0x00,
+        size >=  7 ? 0xff : 0x00,
+        size >=  8 ? 0xff : 0x00,
+        size >=  9 ? 0xff : 0x00,
+        size >= 10 ? 0xff : 0x00,
+        size >= 11 ? 0xff : 0x00,
+        size >= 12 ? 0xff : 0x00,
+        size >= 13 ? 0xff : 0x00,
+        size >= 14 ? 0xff : 0x00,
+        size >= 15 ? 0xff : 0x00,
+        size >= 16 ? 0xff : 0x00);
+    __m128i entry_masked = ::_mm_and_si128(::_mm_lddqu_si128((const __m128i*)entry.keyword), mask);
+    __m128i identifier_masked = ::_mm_and_si128(::_mm_lddqu_si128((const __m128i*)identifier), mask);
+    int comparison = ::_mm_movemask_epi8(::_mm_cmpeq_epi8(entry_masked, identifier_masked)) ^ 0xffff;
+    if (comparison == 0) {
+        comparison = entry.keyword[size];  // length check
+    }
+)");
+            break;
         case string_compare_strategy::cmpestri:
             if (table.strategy.cmov) {
                 std::fprintf(file, "%s", R"(
@@ -637,6 +665,7 @@ void go(int argc, char** argv) {
                     {"memcmp", string_compare_strategy::memcmp},
                     {"check1memcmp", string_compare_strategy::check_first_then_memcmp},
                     {"cmpestri", string_compare_strategy::cmpestri},
+                    {"sse2", string_compare_strategy::sse2},
                 });
                 break;
 

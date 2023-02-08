@@ -17,6 +17,8 @@ void test_look_up_identifier(const char* name, look_up_identifier_f* look_up_ide
     };
 
     static constexpr test_case test_cases[] = {
+
+        PHT_KEYWORD_TOKENS_TABLE
         {"hello", token_type::identifier},
         {"___", token_type::identifier},
         {"abstractt", token_type::identifier},
@@ -24,8 +26,6 @@ void test_look_up_identifier(const char* name, look_up_identifier_f* look_up_ide
         {"asx", token_type::identifier},
         {"as0", token_type::identifier},
         {"_as", token_type::identifier},
-
-        PHT_KEYWORD_TOKENS_TABLE
     };
 
     bool ok = true;

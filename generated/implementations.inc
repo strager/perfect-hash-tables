@@ -94,6 +94,8 @@
 "./build/pht--table-size-small_--characters-27_--hasher-icrc32_--string-compare-cmpestri_--cmov-clang.so",
 "./build/pht--table-size-small_--characters-29_--hasher-icrc32_--string-compare-cmpestri_--cmov.so",
 "./build/pht--table-size-small_--characters-29_--hasher-icrc32_--string-compare-cmpestri_--cmov-clang.so",
+"./build/pht--table-size-small_--characters-15_--hasher-icrc32_--string-compare-sse2.so",
+"./build/pht--table-size-small_--characters-15_--hasher-icrc32_--string-compare-sse2-clang.so",
 "./build/pht--table-size-small_--characters-15_--hasher-aes.so",
 "./build/pht--table-size-small_--characters-15_--hasher-aes-clang.so",
 "./build/pht--table-size-small_--characters-23_--hasher-aes.so",
