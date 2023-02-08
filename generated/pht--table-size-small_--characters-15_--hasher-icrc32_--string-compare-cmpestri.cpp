@@ -306,6 +306,7 @@ token_type look_up_identifier(const char* identifier, std::size_t size) noexcept
         size,
         _SIDD_UBYTE_OPS | _SIDD_CMP_EQUAL_EACH | _SIDD_NEGATIVE_POLARITY | _SIDD_LEAST_SIGNIFICANT)
         - 16;
+
     if (comparison == 0) {
         comparison = entry.keyword[size];  // length check
     }
