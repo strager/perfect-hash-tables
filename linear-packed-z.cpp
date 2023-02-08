@@ -14,6 +14,15 @@ constexpr std::size_t max_keyword_size = 11;
 struct table_entry {
     char keyword[max_keyword_size + 1];
     token_type type;
+
+    bool matches(const char* identifier, std::size_t size) const noexcept {
+        for (std::size_t i = 0; i < size; ++i) {
+            if (identifier[i] != this->keyword[i] || identifier[i] == '\0') {
+                return false;
+            }
+        }
+        return this->keyword[size] == '\0';
+    }
 };
 
 std::vector<table_entry> make_keyword_table() {
@@ -22,6 +31,7 @@ std::vector<table_entry> make_keyword_table() {
     for (keyword_token kt : keyword_tokens) {
         table_entry entry;
         std::memcpy(entry.keyword, kt.keyword.data(), kt.keyword.size());
+        entry.keyword[kt.keyword.size()] = '\0';
         entry.type = kt.type;
         result.push_back(entry);
     }
@@ -37,7 +47,7 @@ token_type look_up_identifier(const char* identifier, std::size_t size) noexcept
         return token_type::identifier;
     }
     for (const table_entry& entry : keywords) {
-        if (std::strncmp(entry.keyword, identifier, size) == 0) {
+        if (entry.matches(identifier, size)) {
             return entry.type;
         }
     }
