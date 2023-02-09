@@ -43,6 +43,10 @@ pht_combinations = \
 	--table-size=pot_--characters=23_--hasher=lehmer128_--inline-hash \
 	--table-size=pot_--characters=27_--hasher=lehmer128_--inline-hash \
 	--table-size=pot_--characters=29_--hasher=lehmer128_--inline-hash \
+	--table-size=pot_--characters=15_--hasher=lehmer128_--string-compare=ptest_--cmov \
+	--table-size=pot_--characters=23_--hasher=lehmer128_--string-compare=ptest_--cmov \
+	--table-size=pot_--characters=27_--hasher=lehmer128_--string-compare=ptest_--cmov \
+	--table-size=pot_--characters=29_--hasher=lehmer128_--string-compare=ptest_--cmov \
 	--table-size=small_--characters=15_--hasher=icrc32 \
 	--table-size=small_--characters=23_--hasher=icrc32 \
 	--table-size=small_--characters=27_--hasher=icrc32 \
