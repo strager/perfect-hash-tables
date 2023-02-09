@@ -43,6 +43,7 @@ pht_combinations = \
 	--table-size=pot_--characters=23_--hasher=lehmer128_--inline-hash \
 	--table-size=pot_--characters=27_--hasher=lehmer128_--inline-hash \
 	--table-size=pot_--characters=29_--hasher=lehmer128_--inline-hash \
+	--table-size=pot_--characters=15_--hasher=lehmer128_--string-compare=sse2_--cmov \
 	--table-size=pot_--characters=15_--hasher=lehmer128_--string-compare=ptest_--cmov \
 	--table-size=pot_--characters=23_--hasher=lehmer128_--string-compare=ptest_--cmov \
 	--table-size=pot_--characters=27_--hasher=lehmer128_--string-compare=ptest_--cmov \
@@ -68,6 +69,7 @@ pht_combinations = \
 	--table-size=small_--characters=27_--hasher=icrc32_--string-compare=cmpestri_--cmov \
 	--table-size=small_--characters=29_--hasher=icrc32_--string-compare=cmpestri_--cmov \
 	--table-size=small_--characters=15_--hasher=icrc32_--string-compare=sse2 \
+	--table-size=small_--characters=15_--hasher=icrc32_--string-compare=sse2_--cmov \
 	--table-size=small_--characters=15_--hasher=icrc32_--string-compare=ptest \
 	--table-size=small_--characters=15_--hasher=icrc32_--string-compare=ptest_--cmov \
 	--table-size=small_--characters=15_--hasher=aes \

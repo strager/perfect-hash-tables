@@ -513,15 +513,53 @@ token_type look_up_identifier(const char* identifier, std::size_t size) noexcept
 )");
             break;
         case string_compare_strategy::sse2:
-                std::fprintf(file, "%s", R"(
+            std::fprintf(file, "%s", R"(
     __m128i entry_unmasked = ::_mm_lddqu_si128((const __m128i*)entry.keyword);
     __m128i identifier_unmasked = ::_mm_lddqu_si128((const __m128i*)identifier);
     std::uint32_t mask = (1 << size) - 1;
-    int comparison = mask & ~::_mm_movemask_epi8(::_mm_cmpeq_epi8(entry_unmasked, identifier_unmasked));
+    std::uint32_t equal_mask = ::_mm_movemask_epi8(::_mm_cmpeq_epi8(entry_unmasked, identifier_unmasked));
+    std::uint32_t not_equal_mask = ~equal_mask;
+)");
+            if (table.strategy.cmov) {
+                std::fprintf(file, "%s", R"(
+    int result = (int)entry.type;
+    __asm__(
+        // If what should be the null terminator is not null, then
+        // (size != strlen(entry.keyword)), so set result to
+        // token_type::identifier.
+        "cmpb $0, %[entry_keyword_at_size]\n"
+        "cmovne %[token_type_identifier], %[result]\n"
+
+        : [result]"+r"(result)
+
+        : [entry_keyword_at_size]"m"(entry.keyword[size]),
+          [token_type_identifier]"r"((int)token_type::identifier)
+
+        : "cc"   // Clobbered by cmp.
+    );
+
+    __asm__(
+        "test %[not_equal_mask], %[mask]\n"
+        "cmovne %[token_type_identifier], %[result]\n"
+
+        : [result]"+r"(result)
+
+        : [not_equal_mask]"r"(not_equal_mask),
+          [mask]"r"(mask),
+          [token_type_identifier]"r"((int)token_type::identifier)
+
+        : "cc"   // Clobbered by test.
+    );
+    return (token_type)result;
+)");
+            } else {
+                std::fprintf(file, "%s", R"(
+    int comparison = mask & ~equal_mask;
     if (comparison == 0) {
         comparison = entry.keyword[size];  // length check
     }
 )");
+            }
             break;
         case string_compare_strategy::ptest:
             std::fprintf(file, "%s", R"(
