@@ -92,7 +92,8 @@ custom_combinations = \
 	frozen-unordered-map-lehmer128-firsttwolasttwo \
 	linear-packed-sized \
 	linear-packed-z \
-	std-unordered-map
+	std-unordered-map \
+	std-unordered-map-lehmer128-firsttwolasttwo
 
 custom_sos = $(foreach name,$(custom_combinations),build/$(name).so build/$(name)-clang.so)
 custom_cpps = $(foreach name,$(custom_combinations),$(name).cpp)

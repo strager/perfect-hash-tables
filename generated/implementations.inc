@@ -144,3 +144,5 @@
 "./build/linear-packed-z-clang.so",
 "./build/std-unordered-map.so",
 "./build/std-unordered-map-clang.so",
+"./build/std-unordered-map-lehmer128-firsttwolasttwo.so",
+"./build/std-unordered-map-lehmer128-firsttwolasttwo-clang.so",
