@@ -280,6 +280,7 @@ perfect_hash_table make_perfect_hash_table(const keyword_statistics& stats, tabl
             table.table_size = 256;
             break;
     }
+    long total_attempts = 0;
     for (;;) {
         if (table.table_size > max_table_size) {
 fail:
@@ -292,11 +293,12 @@ fail:
         }
         int max_attempts_per_size = 50'000;
         int attempts = try_build_table(table, max_attempts_per_size);
+        total_attempts += attempts;
         if (attempts < max_attempts_per_size) {
             std::fprintf(
                 stderr,
-                "took %d attempts to generate table of size %lu from %zu items\n",
-                attempts,
+                "took %ld attempts to generate table of size %lu from %zu items\n",
+                total_attempts,
                 table.table_size,
                 std::size(keyword_tokens));
             break;
