@@ -136,7 +136,11 @@ class aes_intrinsic_hasher {
 
     [[gnu::always_inline]]
     void bytes(const std::uint8_t* bytes, std::size_t length) noexcept {
-        std::abort();
+        if (length == 4) {
+            this->bytes_4(bytes);
+        } else {
+            std::abort();
+        }
     }
 
     [[gnu::always_inline]]
@@ -172,7 +176,11 @@ class lehmer_hasher {
     explicit lehmer_hasher(std::uint32_t basis) noexcept : hash_(basis) {}
 
     void bytes(const std::uint8_t* bytes, std::size_t size) noexcept {
-        std::abort();
+        if (size == 4) {
+            this->bytes_4(bytes);
+        } else {
+            std::abort();
+        }
     }
 
     [[gnu::always_inline]]
@@ -212,7 +220,11 @@ class lehmer_128_hasher {
     explicit constexpr lehmer_128_hasher(std::uint32_t basis) noexcept : hash_(basis) {}
 
     void bytes(const std::uint8_t* bytes, std::size_t size) noexcept {
-        std::abort();
+        if (size == 4) {
+            this->bytes_4(bytes);
+        } else {
+            std::abort();
+        }
     }
 
     [[gnu::always_inline]]
