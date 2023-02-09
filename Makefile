@@ -144,7 +144,7 @@ build/pht$(subst =,-,$(flags)).so: generated/pht$(subst =,-,$(flags)).cpp token.
 build/pht$(subst =,-,$(flags))-clang.so: generated/pht$(subst =,-,$(flags)).cpp token.h pht.h fnv.h Makefile build/stamp
 	$$(clang_CXX) $$(extra_CXXFLAGS) $$(CXXFLAGS) $$(extra_test_LDFLAGS) $$(LDFLAGS) -shared -o $$(@) $$(<)
 generated/pht$(subst =,-,$(flags)).cpp: build/generate-pht Makefile generated/stamp
-	./build/generate-pht $(subst _, ,$(flags)) --output $$(@)
+	zsh -c 'time ./build/generate-pht $(subst _, ,$(flags)) --output $$(@)'
 endef
 $(foreach flags,$(pht_combinations),$(eval $(call make_pht_so)))
 

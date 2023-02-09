@@ -129,13 +129,60 @@ struct perfect_hash_table {
 };
 
 template <class Hasher>
+void invalid_hash_selected_characters(Hasher& hasher, const char* s, std::size_t size) noexcept {
+    std::abort();
+}
+
+template <class Hasher, character_selection_mask Mask>
+void do_hash_selected_characters(Hasher& hasher, const char* s, std::size_t size) noexcept {
+    hash_selected_characters(Mask, hasher, s, size);
+}
+
+template <class Hasher>
 [[gnu::noinline]]
 bool try_add_all_entries(perfect_hash_table& table) {
+    using hash_selected_characters_func = void(Hasher& hasher, const char* s, std::size_t size) noexcept;
+    static const hash_selected_characters_func* hash_selected_characters_table[0b11111 + 1] = {
+        &invalid_hash_selected_characters<Hasher>, // 0
+        &invalid_hash_selected_characters<Hasher>, // 1
+        &invalid_hash_selected_characters<Hasher>, // 2
+        &invalid_hash_selected_characters<Hasher>, // 3
+        &invalid_hash_selected_characters<Hasher>, // 4
+        &invalid_hash_selected_characters<Hasher>, // 5
+        &invalid_hash_selected_characters<Hasher>, // 6
+        &invalid_hash_selected_characters<Hasher>, // 7
+        &invalid_hash_selected_characters<Hasher>, // 8
+        &invalid_hash_selected_characters<Hasher>, // 9
+        &invalid_hash_selected_characters<Hasher>, // 10
+        &invalid_hash_selected_characters<Hasher>, // 11
+        &invalid_hash_selected_characters<Hasher>, // 12
+        &invalid_hash_selected_characters<Hasher>, // 13
+        &invalid_hash_selected_characters<Hasher>, // 14
+        &do_hash_selected_characters<Hasher, 15>,
+        &invalid_hash_selected_characters<Hasher>, // 16
+        &invalid_hash_selected_characters<Hasher>, // 17
+        &invalid_hash_selected_characters<Hasher>, // 18
+        &invalid_hash_selected_characters<Hasher>, // 19
+        &invalid_hash_selected_characters<Hasher>, // 20
+        &invalid_hash_selected_characters<Hasher>, // 21
+        &invalid_hash_selected_characters<Hasher>, // 22
+        &do_hash_selected_characters<Hasher, 23>,
+        &invalid_hash_selected_characters<Hasher>, // 24
+        &invalid_hash_selected_characters<Hasher>, // 25
+        &invalid_hash_selected_characters<Hasher>, // 26
+        &do_hash_selected_characters<Hasher, 27>,
+        &invalid_hash_selected_characters<Hasher>, // 28
+        &do_hash_selected_characters<Hasher, 29>,
+        &invalid_hash_selected_characters<Hasher>, // 30
+        &do_hash_selected_characters<Hasher, 31>,
+    };
+
+    hash_selected_characters_func* hash_selected_characters_impl = hash_selected_characters_table[table.strategy.character_selection];
     struct hash_and_index {
         std::uint32_t hash;
         std::uint32_t index;
     };
-    auto make_hash_and_index = [&table](keyword_token kt) -> hash_and_index {
+    auto make_hash_and_index = [&](keyword_token kt) -> hash_and_index {
         std::optional<Hasher> optional_hasher;
         if constexpr (std::is_same_v<Hasher, pearson_8_hasher>) {
             optional_hasher.emplace(table.seed.get_256_byte());
@@ -143,7 +190,7 @@ bool try_add_all_entries(perfect_hash_table& table) {
             optional_hasher.emplace(table.seed.get_32());
         }
         Hasher& hasher = *optional_hasher;
-        hash_selected_characters(table.strategy.character_selection, hasher, kt.keyword.data(), kt.keyword.size());
+        hash_selected_characters_impl(hasher, kt.keyword.data(), kt.keyword.size());
         std::uint32_t h = hasher.hash();
         std::uint32_t index = hash_to_index(h, table.table_size, table.entry_size, table.strategy.hash_to_index);
         return hash_and_index{
