@@ -8,6 +8,9 @@
 * move string data out of line
 * early exit if not 'a'..'z'
 * try different table sizes for icrc32
+* https://crates.io/crates/phf
+* reimplement gperf
+* Rust std::collections::HashMap
 
 ## gperf (stock) vs gperf --compare-lengths
 
