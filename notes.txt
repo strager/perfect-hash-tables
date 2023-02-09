@@ -34,3 +34,23 @@ commit c2234da296f64226ca20ab30a2d09e785ac26375:
     $ perf stat ./build/benchmark-lite ./build/gperf--pic.so
     2,693,627,001      branches                  #    1.081 G/sec                    (83.38%)
       237,105,877      branch-misses             #    8.80% of all branches          (83.38%)
+
+## gperf vs my hashing algorithms
+
+keywords:
+    gperf performs better than any of my hashing algorithm with --string-compare=memcmp.
+    With --string-compare=check1memcmp, gperf is competitive with icrc32. (Other hash functions untested.)
+
+nonkeywords:
+    gperf is bimodal:
+      fast (~ 95 us): (default), inline strings
+      slow (~140 us): --pic, --compare-lengths
+    gperf performs better than any of my hashing algorithm with --string-compare=memcmp.
+    icrc32 with --string-compare=check1memcmp (~69 us) outperforms gperf (~95 us). (Other hash functions untested.)
+    frozen::unordered_map with lehmer128 (4 character selection) performs well (~85 us).
+
+mixed:
+    gperf: inline strings performs best (~184 us), slightly ahead of default (~188 us)
+    gperf performs better than any of my hashing algorithm with --string-compare=memcmp.
+    icrc32 with --string-compare=check1memcmp (~152 us) outperforms gperf (~188 us). (Other hash functions untested.)
+    frozen::unordered_map with lehmer128 (4 character selection) (~209 us) performs competitively with icrc32 --string-compare=memcmp (~207 us).
