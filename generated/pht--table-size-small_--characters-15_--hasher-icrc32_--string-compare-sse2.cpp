@@ -316,14 +316,10 @@ token_type look_up_identifier(const char* identifier, std::size_t size) noexcept
     std::uint32_t index = hash_to_index(h, table_size, sizeof(table_entry), hash_to_index_strategy::modulo);
     const table_entry& entry = table[index];
 
-    __m128i mask = ::_mm_load_si128((const __m128i*)masks[size]);
     __m128i entry_unmasked = ::_mm_lddqu_si128((const __m128i*)entry.keyword);
     __m128i identifier_unmasked = ::_mm_lddqu_si128((const __m128i*)identifier);
-    __m128i entry_masked = ::_mm_and_si128(entry_unmasked, mask);
-    __m128i identifier_masked = ::_mm_and_si128(identifier_unmasked, mask);
-    // FIXME(strager): LLVM likes to optimize this to a 'ptest', breaking
-    // fairness. We should compile without -msse4.2.
-    int comparison = ::_mm_movemask_epi8(::_mm_cmpeq_epi8(entry_masked, identifier_masked)) ^ 0xffff;
+    std::uint32_t mask = (1 << size) - 1;
+    int comparison = mask & ~::_mm_movemask_epi8(::_mm_cmpeq_epi8(entry_unmasked, identifier_unmasked));
     if (comparison == 0) {
         comparison = entry.keyword[size];  // length check
     }
