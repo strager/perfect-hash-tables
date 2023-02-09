@@ -428,23 +428,6 @@ constexpr table_entry table[table_size] = {
     }
     std::fprintf(file, R"(
 };
-
-constexpr std::uint8_t t = 0xff;
-constexpr std::uint8_t f = 0x00;
-constexpr std::uint8_t masks[max_keyword_size+1][16] = {
-    {f,f,f,f,f,f,f,f,f,f,f,f,f,f,f,f},
-    {t,f,f,f,f,f,f,f,f,f,f,f,f,f,f,f},
-    {t,t,f,f,f,f,f,f,f,f,f,f,f,f,f,f},
-    {t,t,t,f,f,f,f,f,f,f,f,f,f,f,f,f},
-    {t,t,t,t,f,f,f,f,f,f,f,f,f,f,f,f},
-    {t,t,t,t,t,f,f,f,f,f,f,f,f,f,f,f},
-    {t,t,t,t,t,t,f,f,f,f,f,f,f,f,f,f},
-    {t,t,t,t,t,t,t,f,f,f,f,f,f,f,f,f},
-    {t,t,t,t,t,t,t,t,f,f,f,f,f,f,f,f},
-    {t,t,t,t,t,t,t,t,t,f,f,f,f,f,f,f},
-    {t,t,t,t,t,t,t,t,t,t,f,f,f,f,f,f},
-    {t,t,t,t,t,t,t,t,t,t,t,f,f,f,f,f},
-};
 }
 
 token_type look_up_identifier(const char* identifier, std::size_t size) noexcept {
@@ -498,7 +481,11 @@ token_type look_up_identifier(const char* identifier, std::size_t size) noexcept
             break;
         case string_compare_strategy::ptest:
             std::fprintf(file, "%s", R"(
-    __m128i mask = ::_mm_load_si128((const __m128i*)masks[size]);
+    __m128i mask = ::_mm_cmpgt_epi8(
+        ::_mm_set1_epi8(size),
+        ::_mm_setr_epi8(
+            0, 1, 2, 3, 4, 5, 6, 7,
+            8, 9, 10, 11, 12, 13, 14, 15));
     __m128i entry_unmasked = ::_mm_lddqu_si128((const __m128i*)entry.keyword);
     __m128i identifier_unmasked = ::_mm_lddqu_si128((const __m128i*)identifier);
     __m128i compared = ::_mm_xor_si128(entry_unmasked, identifier_unmasked);

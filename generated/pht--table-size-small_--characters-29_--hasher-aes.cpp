@@ -271,23 +271,6 @@ constexpr table_entry table[table_size] = {
   {{'u','n','i','q','u','e',0,'_','_','_','_','_',}, token_type::kw_unique},
 
 };
-
-constexpr std::uint8_t t = 0xff;
-constexpr std::uint8_t f = 0x00;
-constexpr std::uint8_t masks[max_keyword_size+1][16] = {
-    {f,f,f,f,f,f,f,f,f,f,f,f,f,f,f,f},
-    {t,f,f,f,f,f,f,f,f,f,f,f,f,f,f,f},
-    {t,t,f,f,f,f,f,f,f,f,f,f,f,f,f,f},
-    {t,t,t,f,f,f,f,f,f,f,f,f,f,f,f,f},
-    {t,t,t,t,f,f,f,f,f,f,f,f,f,f,f,f},
-    {t,t,t,t,t,f,f,f,f,f,f,f,f,f,f,f},
-    {t,t,t,t,t,t,f,f,f,f,f,f,f,f,f,f},
-    {t,t,t,t,t,t,t,f,f,f,f,f,f,f,f,f},
-    {t,t,t,t,t,t,t,t,f,f,f,f,f,f,f,f},
-    {t,t,t,t,t,t,t,t,t,f,f,f,f,f,f,f},
-    {t,t,t,t,t,t,t,t,t,t,f,f,f,f,f,f},
-    {t,t,t,t,t,t,t,t,t,t,t,f,f,f,f,f},
-};
 }
 
 token_type look_up_identifier(const char* identifier, std::size_t size) noexcept {
