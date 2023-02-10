@@ -88,7 +88,8 @@ pht_sos = $(foreach flags,$(pht_combinations),build/pht$(subst =,-,$(flags)).so 
 pht_cpps = $(foreach flags,$(pht_combinations),generated/pht$(subst =,-,$(flags)).cpp)
 
 mygperf_combinations = \
-	_
+	--string-compare=memcmp \
+	--string-compare=check1memcmp
 
 mygperf_sos = $(foreach flags,$(mygperf_combinations),build/mygperf$(subst =,-,$(flags)).so build/mygperf$(subst =,-,$(flags))-clang.so)
 mygperf_cpps = $(foreach flags,$(mygperf_combinations),generated/mygperf$(subst =,-,$(flags)).cpp)

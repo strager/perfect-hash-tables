@@ -28,9 +28,17 @@ token_type look_up_identifier(const char* str, std::size_t len) noexcept {
     }
 
     const char *s = wordlist[h].string;
-    if (std::memcmp(str, s, len) != 0 || s[len] != '\0') {
-      return token_type::identifier;
+    if (s[0] != str[0]) {
+        return token_type::identifier;
     }
-    return wordlist[h].type;
+    int comparison = std::memcmp(str, s, len);
+    if (comparison == 0) {
+        comparison = s[len];  // length check
+    }
+    if (comparison == 0) {
+        return wordlist[h].type;
+    } else {
+        return token_type::identifier;
+    }
 }
 }

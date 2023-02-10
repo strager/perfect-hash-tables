@@ -9,17 +9,23 @@ import subprocess
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--output", required=True, metavar="PATH")
+    parser.add_argument("--string-compare", default="memcmp")
     args = parser.parse_args()
 
     output_path = pathlib.Path(args.output)
+
+    string_compare = args.string_compare
+    legal_string_compares = ["memcmp", "check1memcmp"]
+    if string_compare not in legal_string_compares:
+        raise Exception(f"expected --string-compare={legal_string_compares.join(' or =')}")
 
     raw_gperf_output = subprocess.check_output(["gperf", "token.gperf"], encoding="utf-8")
     tables = parse_gperf_output(raw_gperf_output)
 
     with open(output_path, "w") as out:
         out.write(f"""\
-#include <stddef.h>
-#include <string.h>
+#include <cstddef>
+#include <cstring>
 #include "token.h"
 
 namespace pht {{
@@ -47,12 +53,32 @@ token_type look_up_identifier(const char* str, std::size_t len) noexcept {{
     }}
 
     const char *s = wordlist[h].string;
+""")
 
-    if (!strncmp(str, s, len) && s[len] == '\\0') {{
-      return wordlist[h].type;
+        if string_compare == "memcmp":
+            out.write(f"""\
+    int comparison = std::memcmp(str, s, len);
+    if (comparison == 0) {{
+        comparison = s[len];  // length check
     }}
+""")
+        elif string_compare == "check1memcmp":
+            out.write(f"""\
+    if (s[0] != str[0]) {{
+        return token_type::identifier;
+    }}
+    int comparison = std::memcmp(str, s, len);
+    if (comparison == 0) {{
+        comparison = s[len];  // length check
+    }}
+""")
 
-    return token_type::identifier;
+        out.write(f"""\
+    if (comparison == 0) {{
+        return wordlist[h].type;
+    }} else {{
+        return token_type::identifier;
+    }}
 }}
 }}
 """)
