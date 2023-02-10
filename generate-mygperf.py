@@ -11,6 +11,7 @@ def main() -> None:
     parser.add_argument("--output", required=True, metavar="PATH")
     parser.add_argument("--string-compare", default="memcmp")
     parser.add_argument("--cmov", action="store_true")
+    parser.add_argument("--jump", type=int, default=5)
     args = parser.parse_args()
 
     output_path = pathlib.Path(args.output)
@@ -21,7 +22,7 @@ def main() -> None:
     if string_compare not in legal_string_compares:
         raise Exception(f"expected --string-compare={legal_string_compares.join(' or =')}")
 
-    raw_gperf_output = subprocess.check_output(["gperf", "token.gperf"], encoding="utf-8")
+    raw_gperf_output = subprocess.check_output(["gperf", f"--jump={args.jump}", "token.gperf"], encoding="utf-8")
     tables = parse_gperf_output(raw_gperf_output)
 
     with open(output_path, "w") as out:

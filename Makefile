@@ -21,10 +21,12 @@ gperf_combinations = \
 	--compare-lengths_--readonly-tables \
 	--compare-lengths_--seven-bit \
 	--inline-strings \
-	--inline-strings_--compare-lengths
+	--inline-strings_--compare-lengths \
+	--jump=1 \
+	--jump=1_--inline-strings \
 
-gperf_sos = $(foreach flags,$(gperf_combinations),build/gperf$(flags).so build/gperf$(flags)-clang.so)
-gperf_cpps = $(foreach flags,$(gperf_combinations),generated/gperf$(flags).cpp)
+gperf_sos = $(foreach flags,$(gperf_combinations),build/gperf$(subst =,-,$(flags)).so build/gperf$(subst =,-,$(flags))-clang.so)
+gperf_cpps = $(foreach flags,$(gperf_combinations),generated/gperf$(subst =,-,$(flags)).cpp)
 
 pht_combinations = \
 	--table-size=pot_--characters=15_--hasher=xx364 \
@@ -92,10 +94,13 @@ mygperf_combinations = \
 	--string-compare=check1memcmp \
 	--string-compare=sse2 \
 	--string-compare=sse2_--cmov \
+	--string-compare=sse2_--cmov_--jump=1 \
 	--string-compare=ptest \
 	--string-compare=ptest_--cmov \
+	--string-compare=ptest_--cmov_--jump=1 \
 	--string-compare=cmpestri \
-	--string-compare=cmpestri_--cmov
+	--string-compare=cmpestri_--cmov \
+	--string-compare=cmpestri_--cmov_--jump=1
 
 mygperf_sos = $(foreach flags,$(mygperf_combinations),build/mygperf$(subst =,-,$(flags)).so build/mygperf$(subst =,-,$(flags))-clang.so)
 mygperf_cpps = $(foreach flags,$(mygperf_combinations),generated/mygperf$(subst =,-,$(flags)).cpp)
@@ -169,21 +174,21 @@ endef
 $(foreach flags,$(pht_combinations),$(eval $(call make_pht_so)))
 
 define make_gperf_so
-build/gperf$(flags).so: generated/gperf$(flags).cpp token.h Makefile build/stamp
+build/gperf$(subst =,-,$(flags)).so: generated/gperf$(subst =,-,$(flags)).cpp token.h Makefile build/stamp
 	$$(CXX) -I. $$(extra_CXXFLAGS) $$(CXXFLAGS) $$(extra_test_LDFLAGS) $$(LDFLAGS) $$(extra_gperf_CXXFLAGS) -shared -o $$(@) $$(<)
-build/gperf$(flags)-clang.so: generated/gperf$(flags).cpp token.h Makefile build/stamp
+build/gperf$(subst =,-,$(flags))-clang.so: generated/gperf$(subst =,-,$(flags)).cpp token.h Makefile build/stamp
 	$$(clang_CXX) -I. $$(extra_CXXFLAGS) $$(CXXFLAGS) $$(extra_test_LDFLAGS) $$(LDFLAGS) $$(extra_gperf_CXXFLAGS) -shared -o $$(@) $$(<)
 
 ifeq ($(findstring --pic,$(flags)), --pic)
-build/gperf$(flags).so: extra_gperf_CXXFLAGS = -DGPERF_PIC
-build/gperf$(flags)-clang.so: extra_gperf_CXXFLAGS = -DGPERF_PIC
+build/gperf$(subst =,-,$(flags)).so: extra_gperf_CXXFLAGS = -DGPERF_PIC
+build/gperf$(subst =,-,$(flags))-clang.so: extra_gperf_CXXFLAGS = -DGPERF_PIC
 endif
 ifeq ($(findstring --inline-strings,$(flags)), --inline-strings)
-build/gperf$(flags).so: extra_gperf_CXXFLAGS = -DGPERF_INLINE
-build/gperf$(flags)-clang.so: extra_gperf_CXXFLAGS = -DGPERF_INLINE
+build/gperf$(subst =,-,$(flags)).so: extra_gperf_CXXFLAGS = -DGPERF_INLINE
+build/gperf$(subst =,-,$(flags))-clang.so: extra_gperf_CXXFLAGS = -DGPERF_INLINE
 endif
 
-generated/gperf$(flags).cpp: token.gperf Makefile generated/stamp
+generated/gperf$(subst =,-,$(flags)).cpp: token.gperf Makefile generated/stamp
 	set -e -o pipefail ; gperf $(subst --inline-strings,,$(subst _, ,$(flags))) $$(<) | sed -e '/^#line/d' >$$(@)
 endef
 $(foreach flags,$(gperf_combinations),$(eval $(call make_gperf_so)))
