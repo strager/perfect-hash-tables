@@ -29,7 +29,14 @@ token_type look_up_identifier(const char* str, std::size_t len) noexcept {
     }
 
     const keyword_entry& entry = wordlist[h];
-    int comparison = std::memcmp(str, entry.keyword, len);
+    __m128i entry_unmasked = ::_mm_lddqu_si128((const __m128i*)entry.keyword);
+    __m128i identifier_unmasked = ::_mm_lddqu_si128((const __m128i*)str);
+    // Calculating the mask this way seems to be much much faster than '(1 << len) - 1'.
+    std::uint32_t inv_mask = ~(std::uint32_t)0 << len;
+    std::uint32_t mask = ~inv_mask;
+    std::uint32_t equal_mask = ::_mm_movemask_epi8(::_mm_cmpeq_epi8(entry_unmasked, identifier_unmasked));
+    std::uint32_t not_equal_mask = ~equal_mask;
+    int comparison = mask & ~equal_mask;
     if (comparison == 0) {
         comparison = entry.keyword[len];  // length check
     }

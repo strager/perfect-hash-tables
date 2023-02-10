@@ -1,6 +1,7 @@
 #include <cstddef>
 #include <cstring>
 #include "token.h"
+#include <nmmintrin.h>
 
 namespace pht {
 namespace {
@@ -9,7 +10,7 @@ constexpr int       MIN_WORD_LENGTH = 2;
 constexpr int       MAX_WORD_LENGTH = 11;
 constexpr int       MIN_HASH_VALUE = 2;
 constexpr int       MAX_HASH_VALUE = 161    ;struct keyword_entry {
-  char string[MAX_WORD_LENGTH + 1];
+  char keyword[MAX_WORD_LENGTH + 1];
   token_type type;
 };
 }
@@ -27,13 +28,13 @@ token_type look_up_identifier(const char* str, std::size_t len) noexcept {
         return token_type::identifier;
     }
 
-    const char *s = wordlist[h].string;
-    if (s[0] != str[0]) {
+    const keyword_entry& entry = wordlist[h];
+    if (entry.keyword[0] != str[0]) {
         return token_type::identifier;
     }
-    int comparison = std::memcmp(str, s, len);
+    int comparison = std::memcmp(str, entry.keyword, len);
     if (comparison == 0) {
-        comparison = s[len];  // length check
+        comparison = entry.keyword[len];  // length check
     }
     if (comparison == 0) {
         return wordlist[h].type;

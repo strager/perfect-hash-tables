@@ -29,14 +29,41 @@ token_type look_up_identifier(const char* str, std::size_t len) noexcept {
     }
 
     const keyword_entry& entry = wordlist[h];
-    int comparison = std::memcmp(str, entry.keyword, len);
-    if (comparison == 0) {
-        comparison = entry.keyword[len];  // length check
-    }
-    if (comparison == 0) {
-        return wordlist[h].type;
-    } else {
-        return token_type::identifier;
-    }
+    __m128i entry_unmasked = ::_mm_lddqu_si128((const __m128i*)entry.keyword);
+    __m128i identifier_unmasked = ::_mm_lddqu_si128((const __m128i*)str);
+    // Calculating the mask this way seems to be much much faster than '(1 << len) - 1'.
+    std::uint32_t inv_mask = ~(std::uint32_t)0 << len;
+    std::uint32_t mask = ~inv_mask;
+    std::uint32_t equal_mask = ::_mm_movemask_epi8(::_mm_cmpeq_epi8(entry_unmasked, identifier_unmasked));
+    std::uint32_t not_equal_mask = ~equal_mask;
+    int result = (int)entry.type;
+    __asm__(
+        // If what should be the null terminator is not null, then
+        // (len != strlen(entry.keyword)), so set result to
+        // token_type::identifier.
+        "cmpb $0, %[entry_keyword_at_size]\n"
+        "cmovne %[token_type_identifier], %[result]\n"
+
+        : [result]"+r"(result)
+
+        : [entry_keyword_at_size]"m"(entry.keyword[len]),
+          [token_type_identifier]"r"((int)token_type::identifier)
+
+        : "cc"   // Clobbered by cmp.
+    );
+
+    __asm__(
+        "test %[not_equal_mask], %[mask]\n"
+        "cmovne %[token_type_identifier], %[result]\n"
+
+        : [result]"+r"(result)
+
+        : [not_equal_mask]"r"(not_equal_mask),
+          [mask]"r"(mask),
+          [token_type_identifier]"r"((int)token_type::identifier)
+
+        : "cc"   // Clobbered by test.
+    );
+    return (token_type)result;
 }
 }

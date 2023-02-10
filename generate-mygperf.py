@@ -10,12 +10,14 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--output", required=True, metavar="PATH")
     parser.add_argument("--string-compare", default="memcmp")
+    parser.add_argument("--cmov", action="store_true")
     args = parser.parse_args()
 
     output_path = pathlib.Path(args.output)
+    cmov = args.cmov
 
     string_compare = args.string_compare
-    legal_string_compares = ["memcmp", "check1memcmp"]
+    legal_string_compares = ["memcmp", "check1memcmp", "sse2"]
     if string_compare not in legal_string_compares:
         raise Exception(f"expected --string-compare={legal_string_compares.join(' or =')}")
 
@@ -27,6 +29,7 @@ def main() -> None:
 #include <cstddef>
 #include <cstring>
 #include "token.h"
+#include <nmmintrin.h>
 
 namespace pht {{
 namespace {{
@@ -34,7 +37,7 @@ namespace {{
         out.write(tables.constants.replace("{", "constexpr int ").replace("}", "").replace(",", ";\nconstexpr int "))
         out.write(f"""\
 struct keyword_entry {{
-  char string[MAX_WORD_LENGTH + 1];
+  char keyword[MAX_WORD_LENGTH + 1];
   token_type type;
 }};
 }}
@@ -52,33 +55,85 @@ token_type look_up_identifier(const char* str, std::size_t len) noexcept {{
         return token_type::identifier;
     }}
 
-    const char *s = wordlist[h].string;
+    const keyword_entry& entry = wordlist[h];
 """)
 
         if string_compare == "memcmp":
             out.write(f"""\
-    int comparison = std::memcmp(str, s, len);
+    int comparison = std::memcmp(str, entry.keyword, len);
     if (comparison == 0) {{
-        comparison = s[len];  // length check
+        comparison = entry.keyword[len];  // length check
     }}
 """)
         elif string_compare == "check1memcmp":
             out.write(f"""\
-    if (s[0] != str[0]) {{
+    if (entry.keyword[0] != str[0]) {{
         return token_type::identifier;
     }}
-    int comparison = std::memcmp(str, s, len);
+    int comparison = std::memcmp(str, entry.keyword, len);
     if (comparison == 0) {{
-        comparison = s[len];  // length check
+        comparison = entry.keyword[len];  // length check
+    }}
+""")
+        elif string_compare == "sse2":
+            out.write(f"""\
+    __m128i entry_unmasked = ::_mm_lddqu_si128((const __m128i*)entry.keyword);
+    __m128i identifier_unmasked = ::_mm_lddqu_si128((const __m128i*)str);
+    // Calculating the mask this way seems to be much much faster than '(1 << len) - 1'.
+    std::uint32_t inv_mask = ~(std::uint32_t)0 << len;
+    std::uint32_t mask = ~inv_mask;
+    std::uint32_t equal_mask = ::_mm_movemask_epi8(::_mm_cmpeq_epi8(entry_unmasked, identifier_unmasked));
+    std::uint32_t not_equal_mask = ~equal_mask;
+""")
+            if cmov:
+                out.write(f"""\
+    int result = (int)entry.type;
+    __asm__(
+        // If what should be the null terminator is not null, then
+        // (len != strlen(entry.keyword)), so set result to
+        // token_type::identifier.
+        "cmpb $0, %[entry_keyword_at_size]\\n"
+        "cmovne %[token_type_identifier], %[result]\\n"
+
+        : [result]"+r"(result)
+
+        : [entry_keyword_at_size]"m"(entry.keyword[len]),
+          [token_type_identifier]"r"((int)token_type::identifier)
+
+        : "cc"   // Clobbered by cmp.
+    );
+
+    __asm__(
+        "test %[not_equal_mask], %[mask]\\n"
+        "cmovne %[token_type_identifier], %[result]\\n"
+
+        : [result]"+r"(result)
+
+        : [not_equal_mask]"r"(not_equal_mask),
+          [mask]"r"(mask),
+          [token_type_identifier]"r"((int)token_type::identifier)
+
+        : "cc"   // Clobbered by test.
+    );
+    return (token_type)result;
+""")
+            else:
+                out.write(f"""\
+    int comparison = mask & ~equal_mask;
+    if (comparison == 0) {{
+        comparison = entry.keyword[len];  // length check
     }}
 """)
 
-        out.write(f"""\
+        if not cmov:
+            out.write(f"""\
     if (comparison == 0) {{
         return wordlist[h].type;
     }} else {{
         return token_type::identifier;
     }}
+""")
+        out.write(f"""\
 }}
 }}
 """)
