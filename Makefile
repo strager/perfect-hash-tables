@@ -119,14 +119,14 @@ custom_cpps = $(foreach name,$(custom_combinations),$(name).cpp)
 sos = $(gperf_sos) $(pht_sos) $(mygperf_sos) $(custom_sos)
 
 .PHONY: all
-all: check build/benchmark build/benchmark-lite keywords.txt non-keywords.txt mixed.txt
+all: check build/benchmark build/benchmark-lite keywords.txt non-keywords.txt mixed.txt $(sos)
 
 .PHONY: bench
-bench: build/benchmark keywords.txt non-keywords.txt mixed.txt
+bench: build/benchmark keywords.txt non-keywords.txt mixed.txt $(sos)
 	./build/benchmark
 
 .PHONY: check
-check: build/test
+check: build/test $(sos)
 	./build/test
 
 .PHONY: clean
@@ -137,10 +137,10 @@ clean:
 clean-all: clean
 	rm -rf generated/
 
-build/test: $(sos) test.cpp token.h implementations.h generated/implementations.inc Makefile build/stamp
+build/test: test.cpp token.h implementations.h generated/implementations.inc Makefile build/stamp
 	$(CXX) $(extra_CXXFLAGS) $(CXXFLAGS) $(LDFLAGS) -o $(@) test.cpp
 
-build/benchmark: $(sos) benchmark.cpp token.h implementations.h generated/implementations.inc Makefile build/stamp
+build/benchmark: benchmark.cpp token.h implementations.h generated/implementations.inc Makefile build/stamp
 	$(CXX) -fno-lto $(extra_CXXFLAGS) $(CXXFLAGS) $(LDFLAGS) -o $(@) benchmark.cpp -lbenchmark
 
 build/benchmark-lite: benchmark-lite.cpp token.h implementations.h generated/implementations.inc Makefile build/stamp
