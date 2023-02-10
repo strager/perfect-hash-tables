@@ -87,6 +87,12 @@ pht_combinations = \
 pht_sos = $(foreach flags,$(pht_combinations),build/pht$(subst =,-,$(flags)).so build/pht$(subst =,-,$(flags))-clang.so)
 pht_cpps = $(foreach flags,$(pht_combinations),generated/pht$(subst =,-,$(flags)).cpp)
 
+mygperf_combinations = \
+	_
+
+mygperf_sos = $(foreach flags,$(mygperf_combinations),build/mygperf$(subst =,-,$(flags)).so build/mygperf$(subst =,-,$(flags))-clang.so)
+mygperf_cpps = $(foreach flags,$(mygperf_combinations),generated/mygperf$(subst =,-,$(flags)).cpp)
+
 custom_combinations = \
 	frozen-unordered-map \
 	frozen-unordered-map-lehmer128-firsttwolasttwo \
@@ -98,7 +104,7 @@ custom_combinations = \
 custom_sos = $(foreach name,$(custom_combinations),build/$(name).so build/$(name)-clang.so)
 custom_cpps = $(foreach name,$(custom_combinations),$(name).cpp)
 
-sos = $(gperf_sos) $(pht_sos) $(custom_sos)
+sos = $(gperf_sos) $(pht_sos) $(mygperf_sos) $(custom_sos)
 
 .PHONY: all
 all: check build/benchmark build/benchmark-lite keywords.txt non-keywords.txt mixed.txt
@@ -174,6 +180,16 @@ generated/gperf$(flags).cpp: token.gperf Makefile generated/stamp
 	set -e -o pipefail ; gperf $(subst --inline-strings,,$(subst _, ,$(flags))) $$(<) | sed -e '/^#line/d' >$$(@)
 endef
 $(foreach flags,$(gperf_combinations),$(eval $(call make_gperf_so)))
+
+define make_mygperf_so
+build/mygperf$(subst =,-,$(flags)).so: generated/mygperf$(subst =,-,$(flags)).cpp token.h Makefile build/stamp
+	$$(CXX) -I. $$(extra_CXXFLAGS) $$(CXXFLAGS) $$(extra_test_LDFLAGS) $$(LDFLAGS) -shared -o $$(@) $$(<)
+build/mygperf$(subst =,-,$(flags))-clang.so: generated/mygperf$(subst =,-,$(flags)).cpp token.h Makefile build/stamp
+	$$(clang_CXX) -I. $$(extra_CXXFLAGS) $$(CXXFLAGS) $$(extra_test_LDFLAGS) $$(LDFLAGS) -shared -o $$(@) $$(<)
+generated/mygperf$(subst =,-,$(flags)).cpp: generate-mygperf.py Makefile generated/stamp
+	python ./generate-mygperf.py $(subst _, ,$(flags)) --output $$(@)
+endef
+$(foreach flags,$(mygperf_combinations),$(eval $(call make_mygperf_so)))
 
 keywords.txt non-keywords.txt mixed.txt: build/map-to-tokens jquery-3.5.1.js
 	./build/map-to-tokens

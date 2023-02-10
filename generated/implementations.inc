@@ -134,6 +134,8 @@
 "./build/pht--table-size-pot_--characters-15_--hasher-aes_--shiftless-index_--entry-size-16-clang.so",
 "./build/pht--characters-15_--hasher-pearson8.so",
 "./build/pht--characters-15_--hasher-pearson8-clang.so",
+"./build/mygperf_.so",
+"./build/mygperf_-clang.so",
 "./build/frozen-unordered-map.so",
 "./build/frozen-unordered-map-clang.so",
 "./build/frozen-unordered-map-lehmer128-firsttwolasttwo.so",
