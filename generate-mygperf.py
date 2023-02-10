@@ -11,11 +11,13 @@ def main() -> None:
     parser.add_argument("--output", required=True, metavar="PATH")
     parser.add_argument("--string-compare", default="memcmp")
     parser.add_argument("--cmov", action="store_true")
+    parser.add_argument("--saturate-hash", action="store_true")
     parser.add_argument("--jump", type=int, default=5)
     args = parser.parse_args()
 
     output_path = pathlib.Path(args.output)
     cmov = args.cmov
+    saturate_hash = args.saturate_hash
 
     string_compare = args.string_compare
     legal_string_compares = ["memcmp", "check1memcmp", "sse2", "ptest", "cmpestri"]
@@ -45,17 +47,36 @@ struct keyword_entry {{
 
 token_type look_up_identifier(const char* str, std::size_t len) noexcept {{
     static constexpr std::uint8_t asso_values[] = {tables.asso_values};
-    static constexpr keyword_entry wordlist[] = {tables.wordlist};
+    static constexpr keyword_entry wordlist[] = {{
+        {tables.wordlist},
+""")
+        if saturate_hash:
+            out.write(f"""\
+        {{ }}, // Saturated.
+""")
+        out.write(f"""\
+    }};
 
     if (len > MAX_WORD_LENGTH || len < MIN_WORD_LENGTH) {{
         return token_type::identifier;
     }}
 
     unsigned h = {tables.hash_function};
+""")
+        if saturate_hash:
+            out.write(f"""
+    if (h > MAX_HASH_VALUE + 1) {{
+        h = MAX_HASH_VALUE + 1;
+    }}
+""")
+        else:
+            out.write(f"""
     if (h > MAX_HASH_VALUE) {{
         return token_type::identifier;
     }}
+""")
 
+        out.write(f"""\
     const keyword_entry& entry = wordlist[h];
 """)
 
@@ -278,9 +299,12 @@ def parse_gperf_output(c: str) -> GPerfTables:
             if "};" in line:
                 state = None
         elif state == "wordlist":
-            wordlist += line
             if "};" in line:
                 state = None
+            elif line.strip() == "{":
+                pass
+            else:
+                wordlist += line
 
     return GPerfTables(
         asso_values=asso_values,

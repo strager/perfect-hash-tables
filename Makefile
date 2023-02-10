@@ -94,13 +94,19 @@ mygperf_combinations = \
 	--string-compare=check1memcmp \
 	--string-compare=sse2 \
 	--string-compare=sse2_--cmov \
+	--string-compare=sse2_--cmov_--saturate \
 	--string-compare=sse2_--cmov_--jump=1 \
+	--string-compare=sse2_--cmov_--jump=1_--saturate \
 	--string-compare=ptest \
 	--string-compare=ptest_--cmov \
+	--string-compare=ptest_--cmov_--saturate \
 	--string-compare=ptest_--cmov_--jump=1 \
+	--string-compare=ptest_--cmov_--jump=1_--saturate \
 	--string-compare=cmpestri \
 	--string-compare=cmpestri_--cmov \
-	--string-compare=cmpestri_--cmov_--jump=1
+	--string-compare=cmpestri_--cmov_--saturate \
+	--string-compare=cmpestri_--cmov_--jump=1 \
+	--string-compare=cmpestri_--cmov_--jump=1_--saturate
 
 mygperf_sos = $(foreach flags,$(mygperf_combinations),build/mygperf$(subst =,-,$(flags)).so build/mygperf$(subst =,-,$(flags))-clang.so)
 mygperf_cpps = $(foreach flags,$(mygperf_combinations),generated/mygperf$(subst =,-,$(flags)).cpp)
