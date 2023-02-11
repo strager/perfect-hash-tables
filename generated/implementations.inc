@@ -184,3 +184,4 @@
 "./build/std-unordered-map-clang.so",
 "./build/std-unordered-map-lehmer128-firsttwolasttwo.so",
 "./build/std-unordered-map-lehmer128-firsttwolasttwo-clang.so",
+"./build/rs-std-collections-hash-map.so",
