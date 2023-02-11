@@ -123,7 +123,8 @@ custom_sos = $(foreach name,$(custom_combinations),build/$(name).so build/$(name
 custom_cpps = $(foreach name,$(custom_combinations),$(name).cpp)
 
 rust_sos = \
-	   build/rs-std-collections-hash-map.so
+	   build/rs-std-collections-hash-map.so \
+	   build/rs-phf.so
 
 sos = $(gperf_sos) $(pht_sos) $(mygperf_sos) $(custom_sos) $(rust_sos)
 
@@ -172,6 +173,10 @@ $(foreach name,$(custom_combinations),$(eval $(call make_custom_so)))
 build/rs-std-collections-hash-map.so: rs-std-collections-hash-map/src/lib.rs rs-token/src/lib.rs
 	cargo build --release --manifest-path rs-std-collections-hash-map/Cargo.toml
 	cp -a rs-std-collections-hash-map/target/release/librs_std_collections_hash_map.so $(@)
+
+build/rs-phf.so: rs-phf/src/lib.rs rs-token/src/lib.rs
+	cargo build --release --manifest-path rs-phf/Cargo.toml
+	cp -a rs-phf/target/release/librs_phf.so $(@)
 
 build/generate-pht: generate-pht.cpp token.h pht.h fnv.h Makefile build/stamp
 	$(CXX) $(extra_CXXFLAGS) $(CXXFLAGS) $(LDFLAGS) -o $(@) generate-pht.cpp
