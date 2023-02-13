@@ -28,6 +28,7 @@
 "./build/mygperf--string-compare-memcmp.so",
 "./build/mygperf--string-compare-check1memcmp.so",
 "./build/bsearch-string-view.so",
+"./build/bsearch-packed-sized.so",
 "./build/frozen-unordered-map.so",
 "./build/frozen-unordered-map-lehmer128-firsttwolasttwo.so",
 "./build/linear-packed-sized.so",

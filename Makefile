@@ -159,6 +159,7 @@ mygperf_cpps = $(foreach flags,$(mygperf_combinations),generated/mygperf$(subst 
 
 custom_combinations = \
 	bsearch-string-view \
+	bsearch-packed-sized \
 	frozen-unordered-map \
 	frozen-unordered-map-lehmer128-firsttwolasttwo \
 	linear-packed-sized \
