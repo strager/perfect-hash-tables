@@ -131,7 +131,8 @@ pht_combinations += \
 endif
 ifeq ($(os),Darwin)
 pht_combinations += \
-	--table-size=pot_--characters=15_--hasher=lehmer128_--string-compare=neon-mask-test
+	--table-size=pot_--characters=15_--hasher=lehmer128_--string-compare=neon-mask-test \
+	--table-size=pot_--characters=15_--hasher=lehmer128_--string-compare=neon-mask-test_--cmov
 endif
 
 pht_sos = $(foreach flags,$(pht_combinations),build/pht$(subst =,-,$(flags)).so)

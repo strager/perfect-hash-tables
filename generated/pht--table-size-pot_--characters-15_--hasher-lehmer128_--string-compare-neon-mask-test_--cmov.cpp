@@ -565,16 +565,14 @@ token_type look_up_identifier(const char* identifier, std::size_t size) noexcept
     std::memcpy(&identifier_unmasked, identifier, 16);
     ::uint8x16_t compared = ::vandq_u8(::veorq_u8(entry_unmasked, identifier_unmasked), mask);
 
-    int comparison = vgetq_lane_s64(compared, 0) | vgetq_lane_s64(compared, 1);
-    if (comparison == 0) {
-        comparison = entry.keyword[size];  // length check
+    token_type result = entry.type;
+    if (vgetq_lane_s64(compared, 0) | vgetq_lane_s64(compared, 1)) {
+        result = token_type::identifier;
     }
-
-    if (comparison == 0) {
-        return entry.type;
-    } else {
-        return token_type::identifier;
+    if (entry.keyword[size]) {  // length check
+        result = token_type::identifier;
     }
+    return result;
 
 }
 }

@@ -725,11 +725,26 @@ token_type look_up_identifier(const char* identifier, std::size_t size) noexcept
     ::uint8x16_t identifier_unmasked;
     std::memcpy(&identifier_unmasked, identifier, 16);
     ::uint8x16_t compared = ::vandq_u8(::veorq_u8(entry_unmasked, identifier_unmasked), mask);
+)");
+            if (table.strategy.cmov) {
+                std::fprintf(file, "%s", R"(
+    token_type result = entry.type;
+    if (vgetq_lane_s64(compared, 0) | vgetq_lane_s64(compared, 1)) {
+        result = token_type::identifier;
+    }
+    if (entry.keyword[size]) {  // length check
+        result = token_type::identifier;
+    }
+    return result;
+)");
+            } else {
+                std::fprintf(file, "%s", R"(
     int comparison = vgetq_lane_s64(compared, 0) | vgetq_lane_s64(compared, 1);
     if (comparison == 0) {
         comparison = entry.keyword[size];  // length check
     }
 )");
+            }
             break;
     }
     if (!table.strategy.cmov) {
