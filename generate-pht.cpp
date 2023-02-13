@@ -112,6 +112,44 @@ private:
     mutable std::uint8_t data_256_byte[256];
 };
 
+struct selected_keyword_token {
+    std::string_view keyword;
+    token_type type;
+
+    std::uint8_t selection_size;
+    std::array<char, 5> selection;
+
+    static selected_keyword_token make(character_selection_mask mask, keyword_token kt) {
+        selected_keyword_token skt;
+        skt.keyword = kt.keyword;
+        skt.type = kt.type;
+
+        int i = 0;
+        if (mask & (1 << 0)) skt.selection[i++] = (std::uint8_t)kt.keyword[0];
+        if (mask & (1 << 1)) skt.selection[i++] = (std::uint8_t)kt.keyword[1];
+        if (mask & (1 << 2)) skt.selection[i++] = (std::uint8_t)kt.keyword[kt.keyword.size() - 2];
+        if (mask & (1 << 3)) skt.selection[i++] = (std::uint8_t)kt.keyword[kt.keyword.size() - 1];
+        if (mask & (1 << 4)) skt.selection[i++] = (std::uint8_t)kt.keyword.size();
+        skt.selection_size = i;
+
+        return skt;
+    }
+
+    static std::vector<selected_keyword_token> make_all(character_selection_mask mask) {
+        std::vector<selected_keyword_token> skts;
+        skts.reserve(std::size(keyword_tokens));
+        for (keyword_token kt : keyword_tokens) {
+            skts.push_back(make(mask, kt));
+        }
+        return skts;
+    }
+
+    template<class Hasher>
+    void hash_selected_characters(Hasher& hasher) const noexcept {
+        hasher.bytes((const std::uint8_t*)this->selection.data(), this->selection_size);
+    }
+};
+
 struct perfect_hash_table {
     struct table_entry {
         std::string_view keyword = std::string_view();
@@ -139,6 +177,7 @@ struct perfect_hash_table {
     unsigned entry_size;
     unsigned entry_padding;
     int generation;
+    std::vector<selected_keyword_token> skts;
 
     long total_attempts;
 
@@ -146,60 +185,13 @@ struct perfect_hash_table {
 };
 
 template <class Hasher>
-void invalid_hash_selected_characters(Hasher& hasher, const char* s, std::size_t size) noexcept {
-    std::abort();
-}
-
-template <class Hasher, character_selection_mask Mask>
-void do_hash_selected_characters(Hasher& hasher, const char* s, std::size_t size) noexcept {
-    hash_selected_characters(Mask, hasher, s, size);
-}
-
-template <class Hasher>
 [[gnu::noinline]]
 bool try_add_all_entries(perfect_hash_table& table) {
-    using hash_selected_characters_func = void(Hasher& hasher, const char* s, std::size_t size) noexcept;
-    static hash_selected_characters_func* hash_selected_characters_table[0b11111 + 1] = {
-        &invalid_hash_selected_characters<Hasher>, // 0
-        &invalid_hash_selected_characters<Hasher>, // 1
-        &invalid_hash_selected_characters<Hasher>, // 2
-        &invalid_hash_selected_characters<Hasher>, // 3
-        &invalid_hash_selected_characters<Hasher>, // 4
-        &invalid_hash_selected_characters<Hasher>, // 5
-        &invalid_hash_selected_characters<Hasher>, // 6
-        &invalid_hash_selected_characters<Hasher>, // 7
-        &invalid_hash_selected_characters<Hasher>, // 8
-        &invalid_hash_selected_characters<Hasher>, // 9
-        &invalid_hash_selected_characters<Hasher>, // 10
-        &invalid_hash_selected_characters<Hasher>, // 11
-        &invalid_hash_selected_characters<Hasher>, // 12
-        &invalid_hash_selected_characters<Hasher>, // 13
-        &invalid_hash_selected_characters<Hasher>, // 14
-        &do_hash_selected_characters<Hasher, 15>,
-        &invalid_hash_selected_characters<Hasher>, // 16
-        &invalid_hash_selected_characters<Hasher>, // 17
-        &invalid_hash_selected_characters<Hasher>, // 18
-        &invalid_hash_selected_characters<Hasher>, // 19
-        &invalid_hash_selected_characters<Hasher>, // 20
-        &invalid_hash_selected_characters<Hasher>, // 21
-        &invalid_hash_selected_characters<Hasher>, // 22
-        &do_hash_selected_characters<Hasher, 23>,
-        &invalid_hash_selected_characters<Hasher>, // 24
-        &invalid_hash_selected_characters<Hasher>, // 25
-        &invalid_hash_selected_characters<Hasher>, // 26
-        &do_hash_selected_characters<Hasher, 27>,
-        &invalid_hash_selected_characters<Hasher>, // 28
-        &do_hash_selected_characters<Hasher, 29>,
-        &invalid_hash_selected_characters<Hasher>, // 30
-        &do_hash_selected_characters<Hasher, 31>,
-    };
-
-    hash_selected_characters_func* hash_selected_characters_impl = hash_selected_characters_table[table.strategy.character_selection];
     struct hash_and_index {
         std::uint32_t hash;
         std::uint32_t index;
     };
-    auto make_hash_and_index = [&](keyword_token kt) -> hash_and_index {
+    auto make_hash_and_index = [&](const selected_keyword_token& skt) -> hash_and_index {
         std::optional<Hasher> optional_hasher;
         if constexpr (std::is_same_v<Hasher, pearson_8_hasher>) {
             optional_hasher.emplace(table.seed.get_256_byte());
@@ -207,7 +199,7 @@ bool try_add_all_entries(perfect_hash_table& table) {
             optional_hasher.emplace(table.seed.get_32());
         }
         Hasher& hasher = *optional_hasher;
-        hash_selected_characters_impl(hasher, kt.keyword.data(), kt.keyword.size());
+        skt.hash_selected_characters(hasher);
         std::uint32_t h = hasher.hash();
         std::uint32_t index = hash_to_index(h, table.table_size, table.entry_size, table.strategy.hash_to_index);
         return hash_and_index{
@@ -223,7 +215,7 @@ bool try_add_all_entries(perfect_hash_table& table) {
         std::array<hash_and_index, 4> hashes_and_indexes;
 #pragma GCC unroll 4
         for (std::size_t j = 0; j < hashes_and_indexes.size(); ++j) {
-            hashes_and_indexes[j] = make_hash_and_index(keyword_tokens[i + j]);
+            hashes_and_indexes[j] = make_hash_and_index(table.skts[i + j]);
         }
         for (std::size_t j = 0; j < hashes_and_indexes.size(); ++j) {
             hash_and_index hi = hashes_and_indexes[j];
@@ -235,13 +227,13 @@ bool try_add_all_entries(perfect_hash_table& table) {
         }
     }
     for (; i < std::size(keyword_tokens); i += 1) {
-        keyword_token kt = keyword_tokens[i];
-        hash_and_index hi = make_hash_and_index(kt);
+        const selected_keyword_token& skt = table.skts[i];
+        hash_and_index hi = make_hash_and_index(skt);
         perfect_hash_table::table_entry &entry = table.entries[hi.index];
         if (entry.is_taken(generation)) {
             return false;
         }
-        entry.take(kt.keyword, hi.hash, generation);
+        entry.take(skt.keyword, hi.hash, generation);
     }
 
     return true;
@@ -337,6 +329,8 @@ perfect_hash_table make_perfect_hash_table(const keyword_statistics& stats, tabl
     table.stats = stats;
 
     table.strategy = strategy;
+
+    table.skts = selected_keyword_token::make_all(strategy.character_selection);
 
     // TODO(strager): Properly compute this. This is only correct sometimes.
     unsigned stock_entry_size = 13;
