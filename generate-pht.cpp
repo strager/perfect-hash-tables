@@ -41,6 +41,7 @@ enum class hash_strategy {
 enum class string_compare_strategy {
     memcmp,
     check_first_then_memcmp,
+    check_two_then_memcmp,
     cmpestri,
     sse2,
     ptest,
@@ -526,6 +527,21 @@ token_type look_up_identifier(const char* identifier, std::size_t size) noexcept
     }
 )");
             break;
+        case string_compare_strategy::check_two_then_memcmp:
+            std::fprintf(file, "%s", R"(
+    std::uint16_t entry_first_two;
+    std::memcpy(&entry_first_two, entry.keyword, 2);
+    std::uint16_t identifier_first_two;
+    std::memcpy(&identifier_first_two, identifier, 2);
+    if (entry_first_two != identifier_first_two) {
+        return token_type::identifier;
+    }
+    int comparison = std::memcmp(identifier + 2, entry.keyword + 2, size - 2);
+    if (comparison == 0) {
+        comparison = entry.keyword[size];  // length check
+    }
+)");
+            break;
         case string_compare_strategy::memcmp:
             std::fprintf(file, "%s", R"(
     int comparison = std::memcmp(identifier, entry.keyword, size);
@@ -808,6 +824,7 @@ void go(int argc, char** argv) {
                 string_compare = look_up_or_die(optarg, "--string-compare", std::map<std::string_view, string_compare_strategy>{
                     {"memcmp", string_compare_strategy::memcmp},
                     {"check1memcmp", string_compare_strategy::check_first_then_memcmp},
+                    {"check2memcmp", string_compare_strategy::check_two_then_memcmp},
                     {"cmpestri", string_compare_strategy::cmpestri},
                     {"sse2", string_compare_strategy::sse2},
                     {"ptest", string_compare_strategy::ptest},

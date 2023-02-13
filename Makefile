@@ -72,6 +72,8 @@ pht_combinations = \
 	--table-size=pot_--characters=23_--hasher=lehmer128 \
 	--table-size=pot_--characters=27_--hasher=lehmer128 \
 	--table-size=pot_--characters=29_--hasher=lehmer128 \
+	--table-size=pot_--characters=15_--hasher=lehmer128_--string-compare=check1memcmp \
+	--table-size=pot_--characters=15_--hasher=lehmer128_--string-compare=check2memcmp \
 	--table-size=pot_--characters=15_--hasher=lehmer128_--inline-hash \
 	--table-size=pot_--characters=23_--hasher=lehmer128_--inline-hash \
 	--table-size=pot_--characters=27_--hasher=lehmer128_--inline-hash \
@@ -100,6 +102,10 @@ pht_combinations += \
 	--table-size=small_--characters=23_--hasher=icrc32_--string-compare=check1memcmp \
 	--table-size=small_--characters=27_--hasher=icrc32_--string-compare=check1memcmp \
 	--table-size=small_--characters=29_--hasher=icrc32_--string-compare=check1memcmp \
+	--table-size=small_--characters=15_--hasher=icrc32_--string-compare=check2memcmp \
+	--table-size=small_--characters=23_--hasher=icrc32_--string-compare=check2memcmp \
+	--table-size=small_--characters=27_--hasher=icrc32_--string-compare=check2memcmp \
+	--table-size=small_--characters=29_--hasher=icrc32_--string-compare=check2memcmp \
 	--table-size=small_--characters=15_--hasher=icrc32_--string-compare=cmpestri \
 	--table-size=small_--characters=23_--hasher=icrc32_--string-compare=cmpestri \
 	--table-size=small_--characters=27_--hasher=icrc32_--string-compare=cmpestri \

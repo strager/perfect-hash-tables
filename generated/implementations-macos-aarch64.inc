@@ -20,6 +20,8 @@
 "./build/pht--table-size-pot_--characters-23_--hasher-lehmer128.so",
 "./build/pht--table-size-pot_--characters-27_--hasher-lehmer128.so",
 "./build/pht--table-size-pot_--characters-29_--hasher-lehmer128.so",
+"./build/pht--table-size-pot_--characters-15_--hasher-lehmer128_--string-compare-check1memcmp.so",
+"./build/pht--table-size-pot_--characters-15_--hasher-lehmer128_--string-compare-check2memcmp.so",
 "./build/pht--table-size-pot_--characters-15_--hasher-lehmer128_--inline-hash.so",
 "./build/pht--table-size-pot_--characters-23_--hasher-lehmer128_--inline-hash.so",
 "./build/pht--table-size-pot_--characters-27_--hasher-lehmer128_--inline-hash.so",

@@ -3,7 +3,6 @@
 * two-level hash table: real hash and real hash
 * two-level hash table: size and real hash
 * two hash tables: cuckoo hashing
-* check first two characters
 * check length
 * move string data out of line
 * early exit if not 'a'..'z'
