@@ -142,7 +142,7 @@ template <class Hasher>
 [[gnu::noinline]]
 bool try_add_all_entries(perfect_hash_table& table) {
     using hash_selected_characters_func = void(Hasher& hasher, const char* s, std::size_t size) noexcept;
-    static const hash_selected_characters_func* hash_selected_characters_table[0b11111 + 1] = {
+    static hash_selected_characters_func* hash_selected_characters_table[0b11111 + 1] = {
         &invalid_hash_selected_characters<Hasher>, // 0
         &invalid_hash_selected_characters<Hasher>, // 1
         &invalid_hash_selected_characters<Hasher>, // 2
@@ -234,18 +234,27 @@ bool try_add_all_entries(perfect_hash_table& table, hash_strategy hasher) {
     switch (hasher) {
         case hash_strategy::fnv1a32:
             return try_add_all_entries<fnv1a32>(table);
+#if defined(__x86_64__)
         case hash_strategy::xx3_64:
             return try_add_all_entries<xx3_64_hasher>(table);
         case hash_strategy::intel_crc32:
             return try_add_all_entries<intel_crc32_intrinsic_hasher>(table);
+#endif
         case hash_strategy::lehmer:
             return try_add_all_entries<lehmer_hasher>(table);
         case hash_strategy::lehmer_128:
             return try_add_all_entries<lehmer_128_hasher>(table);
         case hash_strategy::pearson_8:
             return try_add_all_entries<pearson_8_hasher>(table);
+#if defined(__x86_64__)
         case hash_strategy::aes:
             return try_add_all_entries<aes_intrinsic_hasher>(table);
+#endif
+
+        default:
+            std::fprintf(stderr, "unsupported hash strategy\n");
+            std::exit(1);
+            break;
     }
     __builtin_unreachable();
 }
@@ -367,7 +376,9 @@ void write_table(FILE* file, const perfect_hash_table& table) {
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
+#if defined(__x86_64__)
 #include <nmmintrin.h>
+#endif
 
 namespace pht {
 namespace {

@@ -4,7 +4,9 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
+#if defined(__x86_64__)
 #include <nmmintrin.h>
+#endif
 
 namespace pht {
 namespace {

@@ -4,6 +4,7 @@
 #ifndef PERFECT_HASH_TABLES_FNV_H
 #define PERFECT_HASH_TABLES_FNV_H
 
+#include <cstddef>
 #include <cstdint>
 
 namespace pht {

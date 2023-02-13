@@ -11,10 +11,13 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
-#include <nmmintrin.h>
 #include <type_traits>
-#include <wmmintrin.h>
 #include <xxhash.h>
+
+#if defined(__x86_64__)
+#include <nmmintrin.h>
+#include <wmmintrin.h>
+#endif
 
 namespace pht {
 // if (1<<0) is set: s[0]
@@ -95,6 +98,7 @@ class intel_crc32_hasher {
     std::uint32_t hash_;
 };
 
+#if defined(__x86_64__)
 class intel_crc32_intrinsic_hasher {
   public:
     [[gnu::always_inline]]
@@ -127,7 +131,9 @@ class intel_crc32_intrinsic_hasher {
   private:
     std::uint32_t hash_;
 };
+#endif
 
+#if defined(__x86_64__)
 class aes_intrinsic_hasher {
   public:
     [[gnu::always_inline]]
@@ -168,6 +174,7 @@ class aes_intrinsic_hasher {
   private:
     ::__m128i hash_;
 };
+#endif
 
 // https://en.wikipedia.org/wiki/Lehmer_random_number_generator
 class lehmer_hasher {

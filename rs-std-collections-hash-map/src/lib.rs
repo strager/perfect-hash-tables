@@ -11,7 +11,8 @@ fn make_keyword_map() -> std::collections::HashMap<&'static [u8], TokenType> {
 
 static mut KEYWORDS: std::mem::MaybeUninit<std::collections::HashMap<&'static [u8], TokenType>> = std::mem::MaybeUninit::uninit();
 
-#[link_section = ".init_array"]
+#[cfg_attr(target_os = "linux", link_section = ".init_array")]
+#[cfg_attr(target_os = "macos", link_section = "__DATA,__mod_init_func")]
 #[used]
 static INIT_KEYWORDS: unsafe extern "C" fn() = {
     unsafe extern "C" fn init() {

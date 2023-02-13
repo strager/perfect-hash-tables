@@ -1,7 +1,9 @@
 #include <cstddef>
 #include <cstring>
 #include "token.h"
+#if defined(__x86_64__)
 #include <nmmintrin.h>
+#endif
 
 namespace pht {
 namespace {

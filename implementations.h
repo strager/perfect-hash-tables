@@ -14,7 +14,11 @@
 
 namespace pht {
 constexpr const char* implementation_so_paths[] = {
+#if defined(__APPLE__) && defined(__aarch64__)
+#include "generated/implementations-macos-aarch64.inc"
+#else
 #include "generated/implementations.inc"
+#endif
 };
 
 constexpr std::size_t implementation_count = std::size(implementation_so_paths);
