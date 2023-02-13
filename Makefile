@@ -129,6 +129,10 @@ pht_combinations += \
 	--table-size=pot_--characters=15_--hasher=aes_--entry-size=16 \
 	--table-size=pot_--characters=15_--hasher=aes_--shiftless-index_--entry-size=16
 endif
+ifeq ($(os),Darwin)
+pht_combinations += \
+	--table-size=pot_--characters=15_--hasher=lehmer128_--string-compare=neon-mask-test
+endif
 
 pht_sos = $(foreach flags,$(pht_combinations),build/pht$(subst =,-,$(flags)).so)
 ifeq ($(os),Linux)

@@ -27,6 +27,7 @@
 "./build/pht--table-size-pot_--characters-27_--hasher-lehmer128_--inline-hash.so",
 "./build/pht--table-size-pot_--characters-29_--hasher-lehmer128_--inline-hash.so",
 "./build/pht--characters-15_--hasher-pearson8.so",
+"./build/pht--table-size-pot_--characters-15_--hasher-lehmer128_--string-compare-neon-mask-test.so",
 "./build/mygperf--string-compare-memcmp.so",
 "./build/mygperf--string-compare-check1memcmp.so",
 "./build/bsearch-string-view.so",

@@ -7,6 +7,9 @@
 #if defined(__x86_64__)
 #include <nmmintrin.h>
 #endif
+#if defined(__ARM_NEON)
+#include <arm_neon.h>
+#endif
 
 namespace pht {
 namespace {

@@ -45,6 +45,7 @@ enum class string_compare_strategy {
     cmpestri,
     sse2,
     ptest,
+    neon_mask_test,
 };
 
 struct table_strategy {
@@ -391,6 +392,9 @@ void write_table(FILE* file, const perfect_hash_table& table) {
 #if defined(__x86_64__)
 #include <nmmintrin.h>
 #endif
+#if defined(__ARM_NEON)
+#include <arm_neon.h>
+#endif
 
 namespace pht {
 namespace {
@@ -709,6 +713,24 @@ token_type look_up_identifier(const char* identifier, std::size_t size) noexcept
 )");
             }
             break;
+        case string_compare_strategy::neon_mask_test:
+            std::fprintf(file, "%s", R"(
+    ::uint8x16_t zero_to_fifteen = {
+        0, 1, 2, 3, 4, 5, 6, 7,
+        8, 9, 10, 11, 12, 13, 14, 15,
+    };
+    ::uint8x16_t mask = ::vcgtq_u8(::vdupq_n_u8(size), zero_to_fifteen);
+    ::uint8x16_t entry_unmasked;
+    std::memcpy(&entry_unmasked, entry.keyword, 16);
+    ::uint8x16_t identifier_unmasked;
+    std::memcpy(&identifier_unmasked, identifier, 16);
+    ::uint8x16_t compared = ::vandq_u8(::veorq_u8(entry_unmasked, identifier_unmasked), mask);
+    int comparison = vgetq_lane_s64(compared, 0) | vgetq_lane_s64(compared, 1);
+    if (comparison == 0) {
+        comparison = entry.keyword[size];  // length check
+    }
+)");
+            break;
     }
     if (!table.strategy.cmov) {
         std::fprintf(file, "%s", R"(
@@ -828,6 +850,7 @@ void go(int argc, char** argv) {
                     {"cmpestri", string_compare_strategy::cmpestri},
                     {"sse2", string_compare_strategy::sse2},
                     {"ptest", string_compare_strategy::ptest},
+                    {"neon-mask-test", string_compare_strategy::neon_mask_test},
                 });
                 break;
 
