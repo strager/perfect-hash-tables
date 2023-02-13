@@ -63,6 +63,23 @@ struct keyword_statistics {
     std::vector<character_selection_mask> unique_character_selections;
 };
 
+// my_shuffle based on:
+// https://en.cppreference.com/w/cpp/algorithm/random_shuffle
+// Creative Commons Attribution-Sharealike 3.0 Unported License (CC-BY-SA)
+template<class RandomIt, class URBG>
+void my_shuffle(RandomIt first, RandomIt last, URBG&& g)
+{
+    typedef typename std::iterator_traits<RandomIt>::difference_type diff_t;
+    typedef std::uniform_int_distribution<diff_t> distr_t;
+    typedef typename distr_t::param_type param_t;
+
+    distr_t D;
+    for (RandomIt it = first + 1; it != last; ++it) {
+        using std::swap;
+        swap(*it, first[D(g, param_t(0, it - first + 1))]);
+    }
+}
+
 class table_seed {
 public:
     void next() {
@@ -86,7 +103,7 @@ private:
     void init_data_256_byte() const {
         std::iota(std::begin(this->data_256_byte), std::end(this->data_256_byte), 0);
         std::mt19937 rng(this->data);
-        std::shuffle(std::begin(this->data_256_byte), std::end(this->data_256_byte), rng);
+        my_shuffle(std::begin(this->data_256_byte), std::end(this->data_256_byte), rng);
         this->data_256_byte_initd = true;
     }
 
