@@ -27,6 +27,7 @@
 "./build/pht--characters-15_--hasher-pearson8.so",
 "./build/mygperf--string-compare-memcmp.so",
 "./build/mygperf--string-compare-check1memcmp.so",
+"./build/bsearch-string-view.so",
 "./build/frozen-unordered-map.so",
 "./build/frozen-unordered-map-lehmer128-firsttwolasttwo.so",
 "./build/linear-packed-sized.so",
