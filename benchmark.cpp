@@ -18,6 +18,9 @@ void benchmark_look_up_identifier(::benchmark::State& state, implementation impl
             ::benchmark::DoNotOptimize(impl.look_up_identifier(t.begin, t.size));
         }
     }
+    state.counters["lookups"] = ::benchmark::Counter(
+        tokens.size(),
+        benchmark::Counter::kIsIterationInvariantRate);
 }
 
 std::string benchmark_name(const char* test_case, implementation impl) {
