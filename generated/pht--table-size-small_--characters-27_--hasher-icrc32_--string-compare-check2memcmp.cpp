@@ -295,43 +295,23 @@ token_type look_up_identifier(const char* identifier, std::size_t size) noexcept
     std::uint32_t index = hash_to_index(h, table_size, sizeof(table_entry), hash_to_index_strategy::modulo);
     const table_entry& entry = table[index];
 
-    int result = (int)entry.type;
-    __asm__(
-        // If what should be the null terminator is not null, then
-        // (size != strlen(entry.keyword)), so set result to
-        // token_type::identifier.
-        "cmpb $0, %[entry_keyword_at_size]\n"
-        "cmovne %[token_type_identifier], %[result]\n"
+    std::uint16_t entry_first_two;
+    std::memcpy(&entry_first_two, entry.keyword, 2);
+    std::uint16_t identifier_first_two;
+    std::memcpy(&identifier_first_two, identifier, 2);
+    if (entry_first_two != identifier_first_two) {
+        return token_type::identifier;
+    }
+    int comparison = std::memcmp(identifier + 2, entry.keyword + 2, size - 2);
+    if (comparison == 0) {
+        comparison = entry.keyword[size];  // length check
+    }
 
-        : [result]"+r"(result)
-
-        : [entry_keyword_at_size]"m"(entry.keyword[size]),
-          [token_type_identifier]"r"((int)token_type::identifier)
-
-        : "cc"   // Clobbered by pcmpestrm and cmp.
-    );
-
-    __asm__(
-        // Compare the entry.keyword and identifier strings.
-        // %eax: size of %[entry_keyword].
-        // %edx: size of %[identifier].
-        "pcmpestrm %[cmpestrm_flags], %[entry_keyword], %[identifier]\n"
-        // Move if cmpestr's mask was non-zero.
-        "cmovc %[token_type_identifier], %[result]\n"
-
-        : [result]"+r"(result)
-
-        : [identifier]"x"(::_mm_lddqu_si128((const __m128i*)identifier)),
-          [entry_keyword]"x"(::_mm_lddqu_si128((const __m128i*)entry.keyword)),
-          [token_type_identifier]"r"((int)token_type::identifier),
-          [cmpestrm_flags]"i"(_SIDD_UBYTE_OPS | _SIDD_CMP_EQUAL_EACH | _SIDD_NEGATIVE_POLARITY),
-          "a"(size), // %eax: size of %[entry_keyword].
-          "d"(size)  // %edx: size of %[identifier].
-
-        : "cc",   // Clobbered by pcmpestrm.
-          "xmm0"  // Clobbered by pcmpestrm.
-    );
-    return (token_type)result;
+    if (comparison == 0) {
+        return entry.type;
+    } else {
+        return token_type::identifier;
+    }
 
 }
 }

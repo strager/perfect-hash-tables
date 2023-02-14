@@ -304,45 +304,23 @@ token_type look_up_identifier(const char* identifier, std::size_t size) noexcept
     std::uint32_t index = hash_to_index(h, table_size, sizeof(table_entry), hash_to_index_strategy::modulo);
     const table_entry& entry = table[index];
 
-    __m128i mask = ::_mm_cmpgt_epi8(
-        ::_mm_set1_epi8(size),
-        ::_mm_setr_epi8(
-            0, 1, 2, 3, 4, 5, 6, 7,
-            8, 9, 10, 11, 12, 13, 14, 15));
-    __m128i entry_unmasked = ::_mm_lddqu_si128((const __m128i*)entry.keyword);
-    __m128i identifier_unmasked = ::_mm_lddqu_si128((const __m128i*)identifier);
-    __m128i compared = ::_mm_xor_si128(entry_unmasked, identifier_unmasked);
+    std::uint16_t entry_first_two;
+    std::memcpy(&entry_first_two, entry.keyword, 2);
+    std::uint16_t identifier_first_two;
+    std::memcpy(&identifier_first_two, identifier, 2);
+    if (entry_first_two != identifier_first_two) {
+        return token_type::identifier;
+    }
+    int comparison = std::memcmp(identifier + 2, entry.keyword + 2, size - 2);
+    if (comparison == 0) {
+        comparison = entry.keyword[size];  // length check
+    }
 
-    int result = (int)entry.type;
-    __asm__(
-        // If what should be the null terminator is not null, then
-        // (size != strlen(entry.keyword)), so set result to
-        // token_type::identifier.
-        "cmpb $0, %[entry_keyword_at_size]\n"
-        "cmovne %[token_type_identifier], %[result]\n"
-
-        : [result]"+r"(result)
-
-        : [entry_keyword_at_size]"m"(entry.keyword[size]),
-          [token_type_identifier]"r"((int)token_type::identifier)
-
-        : "cc"   // Clobbered by cmp.
-    );
-
-    __asm__(
-        // Compare the entry.keyword and identifier strings.
-        "ptest %[compared], %[mask]\n"
-        "cmovne %[token_type_identifier], %[result]\n"
-
-        : [result]"+r"(result)
-
-        : [compared]"x"(compared),
-          [mask]"x"(mask),
-          [token_type_identifier]"r"((int)token_type::identifier)
-
-        : "cc"   // Clobbered by ptest.
-    );
-    return (token_type)result;
+    if (comparison == 0) {
+        return entry.type;
+    } else {
+        return token_type::identifier;
+    }
 
 }
 }
