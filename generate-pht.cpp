@@ -65,6 +65,19 @@ struct keyword_statistics {
     std::vector<character_selection_mask> unique_character_selections;
 };
 
+template<class IntType, class RNG>
+IntType random_int(RNG& rng, IntType min, IntType max) {
+    using range_type = std::make_unsigned_t<IntType>;
+    range_type range = max - min;
+    range_type mask = std::bit_ceil(range) - 1;
+    for (;;) {
+        range_type r = rng() & mask;
+        if (r <= range) {
+            return r + min;
+        }
+    }
+}
+
 // my_shuffle based on:
 // https://en.cppreference.com/w/cpp/algorithm/random_shuffle
 // Creative Commons Attribution-Sharealike 3.0 Unported License (CC-BY-SA)
@@ -75,10 +88,10 @@ void my_shuffle(RandomIt first, RandomIt last, URBG&& g)
     typedef std::uniform_int_distribution<diff_t> distr_t;
     typedef typename distr_t::param_type param_t;
 
-    distr_t D;
-    for (RandomIt it = first + 1; it != last; ++it) {
+    diff_t size = last - first;
+    for (diff_t i = 0; i < size - 1; ++i) {
         using std::swap;
-        swap(*it, first[D(g, param_t(0, it - first + 1))]);
+        swap(first[i], first[random_int<diff_t>(g, i, size-1)]);
     }
 }
 
