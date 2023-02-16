@@ -46,6 +46,7 @@ enum class string_compare_strategy {
     sse2,
     ptest,
     neon_mask_test,
+    chunk_8_4,
 };
 
 struct table_strategy {
@@ -567,6 +568,38 @@ token_type look_up_identifier(const char* identifier, std::size_t size) noexcept
     }
 )");
             break;
+        case string_compare_strategy::chunk_8_4:
+            std::fprintf(file, "%s", R"(
+    std::uint64_t identifier_first_8;
+    std::memcpy(&identifier_first_8, identifier, 8);
+    std::uint32_t identifier_last_4;
+    std::memcpy(&identifier_last_4, identifier + 8, 4);
+
+    std::uint64_t entry_first_8;
+    std::memcpy(&entry_first_8, entry.keyword, 8);
+    std::uint32_t entry_last_4;
+    std::memcpy(&entry_last_4, entry.keyword + 8, 4);
+
+    // FIXME(strager): GCC emits jumps for this code. Clang emits cmov, which is
+    // much better. We should coerce GCC into generating cmov.
+    std::uint64_t first_8_mask = 
+        size >= 8
+        ? 0xffff'ffff'ffff'ffffULL
+        : (std::uint64_t(1) << (size * 8)) - 1;
+    std::uint32_t last_4_mask =
+        size <= 8
+        ? 0
+        : (std::uint32_t(1) << ((size-8) * 8)) - 1;
+
+    std::uint64_t comparison = (
+        ((identifier_first_8 & first_8_mask) ^ (entry_first_8 & first_8_mask)) |
+        ((identifier_last_4 & last_4_mask) ^ (entry_last_4 & last_4_mask))
+    );
+    if (comparison == 0) {
+        comparison = entry.keyword[size];  // length check
+    }
+)");
+            break;
         case string_compare_strategy::sse2:
             std::fprintf(file, "%s", R"(
     __m128i entry_unmasked = ::_mm_lddqu_si128((const __m128i*)entry.keyword);
@@ -879,6 +912,7 @@ void go(int argc, char** argv) {
                     {"sse2", string_compare_strategy::sse2},
                     {"ptest", string_compare_strategy::ptest},
                     {"neon-mask-test", string_compare_strategy::neon_mask_test},
+                    {"chunk84", string_compare_strategy::chunk_8_4},
                 });
                 break;
 

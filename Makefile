@@ -82,6 +82,7 @@ pht_combinations = \
 	--table-size=pot_--characters=23_--hasher=lehmer128_--inline-hash \
 	--table-size=pot_--characters=27_--hasher=lehmer128_--inline-hash \
 	--table-size=pot_--characters=29_--hasher=lehmer128_--inline-hash \
+	--table-size=pot_--characters=15_--hasher=lehmer128_--string-compare=chunk84 \
 	--characters=15_--hasher=pearson8
 ifeq ($(os),Linux)
 pht_combinations += \
