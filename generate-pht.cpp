@@ -58,6 +58,7 @@ struct table_strategy {
     std::optional<unsigned> entry_size;
     bool inline_hash;
     bool cmov;
+    bool allow_null_in_inputs;
 };
 
 struct keyword_statistics {
@@ -473,11 +474,17 @@ constexpr table_entry table[table_size] = {
                 std::fprintf(file, "%luU, ", (unsigned long)entry.hash);
             }
 
-            // Pad with non-zero bytes so our length checks work properly.
-            std::memset(keyword_buffer.data(), '_', keyword_buffer_size);
-            std::memcpy(keyword_buffer.data(), entry.keyword.data(), entry.keyword.size());
-            if (need_null_terminator) {
-                keyword_buffer[entry.keyword.size()] = '\0';
+            if (table.strategy.allow_null_in_inputs) {
+                // Pad with non-zero bytes so our length checks work properly.
+                std::memset(keyword_buffer.data(), '_', keyword_buffer_size);
+                std::memcpy(keyword_buffer.data(), entry.keyword.data(), entry.keyword.size());
+                if (need_null_terminator) {
+                    keyword_buffer[entry.keyword.size()] = '\0';
+                }
+            } else {
+                // Pad with zero bytes.
+                std::memset(keyword_buffer.data(), '\0', keyword_buffer_size);
+                std::memcpy(keyword_buffer.data(), entry.keyword.data(), entry.keyword.size());
             }
 
             // Write the string character-by-character to avoid C++ adding a
@@ -596,12 +603,22 @@ token_type look_up_identifier(const char* identifier, std::size_t size) noexcept
     std::uint64_t first_8_mask = mask;
     std::uint32_t last_4_mask = mask >> (8*8);
 #endif
-
+)");
+            if (table.strategy.allow_null_in_inputs) {
+                std::fprintf(file, "%s", R"(
     std::uint64_t first_8_comparison =
         ((identifier_first_8 & first_8_mask) ^ (entry_first_8 & first_8_mask));
     std::uint64_t last_4_comparison =
         ((identifier_last_4 & last_4_mask) ^ (entry_last_4 & last_4_mask));
 )");
+            } else {
+                std::fprintf(file, "%s", R"(
+    std::uint64_t first_8_comparison =
+        ((identifier_first_8 & first_8_mask) ^ entry_first_8);
+    std::uint64_t last_4_comparison =
+        ((identifier_last_4 & last_4_mask) ^ entry_last_4);
+)");
+            }
             if (table.strategy.cmov) {
                 std::fprintf(file, "%s", R"(
     int result = (int)entry.type;
@@ -617,16 +634,26 @@ token_type look_up_identifier(const char* identifier, std::size_t size) noexcept
 
         : "cc"   // Clobbered by or.
     );
+)");
+                if (table.strategy.allow_null_in_inputs) {
+                    std::fprintf(file, "%s", R"(
     if (entry.keyword[size] != '\0') result = (int)token_type::identifier;  // length check
+)");
+                }
+                std::fprintf(file, "%s", R"(
     return (token_type)result;
 )");
             } else {
                 std::fprintf(file, "%s", R"(
     std::uint64_t comparison = first_8_comparison | last_4_comparison;
+)");
+                if (table.strategy.allow_null_in_inputs) {
+                    std::fprintf(file, "%s", R"(
     if (comparison == 0) {
         comparison = entry.keyword[size];  // length check
     }
 )");
+                }
             }
             break;
         case string_compare_strategy::sse2:
@@ -868,6 +895,7 @@ void go(int argc, char** argv) {
         {"table-size",      required_argument, 0, 't' },
         {"cmov",            no_argument,       0, 'C' },
         {"inline-hash",     no_argument,       0, 'i' },
+        {"no-null-input",   no_argument,       0, 'N' },
         {"shiftless-index", no_argument,       0, 'l' },
         {nullptr,           0,                 0, 0   }
     };
@@ -875,6 +903,7 @@ void go(int argc, char** argv) {
     const char* out_file_path = nullptr;
     bool inline_hash = false;
     bool cmov = false;
+    bool allow_null_in_inputs = true;
     hash_to_index_strategy hash_to_index = hash_to_index_strategy::modulo;
     string_compare_strategy string_compare = string_compare_strategy::memcmp;
     std::optional<table_size_strategy> size_strategy;
@@ -930,6 +959,10 @@ void go(int argc, char** argv) {
 
             case 'l':
                 hash_to_index = hash_to_index_strategy::shiftless;
+                break;
+
+            case 'N':
+                allow_null_in_inputs = false;
                 break;
 
             case 's':
@@ -1006,6 +1039,7 @@ done_parsing:
         .entry_size = entry_size,
         .inline_hash = inline_hash,
         .cmov = cmov,
+        .allow_null_in_inputs = allow_null_in_inputs,
     };
 
     keyword_statistics stats = make_stats();

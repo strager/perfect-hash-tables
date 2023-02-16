@@ -10,7 +10,7 @@
 
 namespace pht {
 namespace {
-void test_look_up_identifier(const char* name, look_up_identifier_f* look_up_identifier) {
+void test_look_up_identifier(const char* name, look_up_identifier_f* look_up_identifier, bool allow_null_in_inputs) {
     struct test_case {
         char identifier[20 + padding_bytes];
         token_type expected;
@@ -53,7 +53,7 @@ void test_look_up_identifier(const char* name, look_up_identifier_f* look_up_ide
     for (keyword_token kt : keyword_tokens) {
         // If we add any byte to the end of the keyword, it should be recognized
         // as an identifier. Except for 'assert' -> 'asserts'.
-        for (int i = 0; i < 256; ++i) {
+        for (int i = allow_null_in_inputs ? 0 : 1; i < 256; ++i) {
             char test_keyword[20 + padding_bytes];
             std::strcpy(test_keyword, kt.keyword.data());
             test_keyword[kt.keyword.size()] = i;
@@ -82,7 +82,8 @@ int main(int argc, char** argv) {
         = pht::load_implementations();
     for (pht::implementation impl : implementations) {
         if (filter == nullptr || std::strstr(impl.name, filter) != nullptr) {
-            pht::test_look_up_identifier(impl.name, impl.look_up_identifier);
+            bool allow_null_in_inputs = std::strstr(impl.name, "--no-null-inputs") == nullptr;
+            pht::test_look_up_identifier(impl.name, impl.look_up_identifier, allow_null_in_inputs);
         }
     }
     return 0;

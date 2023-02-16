@@ -7,7 +7,6 @@
 * move string data out of line
 * early exit if not 'a'..'z'
 * try different table sizes for icrc32
-* avoid extra compare against null terminator
 * tune iteration factors; optimize table sizes
 
 ## gperf (stock) vs gperf --compare-lengths

@@ -84,7 +84,9 @@ pht_combinations = \
 	--table-size=pot_--characters=27_--hasher=lehmer128_--inline-hash \
 	--table-size=pot_--characters=29_--hasher=lehmer128_--inline-hash \
 	--table-size=pot_--characters=15_--hasher=lehmer128_--string-compare=chunk84 \
+	--table-size=pot_--characters=15_--hasher=lehmer128_--string-compare=chunk84_--no-null-input \
 	--table-size=pot_--characters=15_--hasher=lehmer128_--string-compare=chunk84_--cmov \
+	--table-size=pot_--characters=15_--hasher=lehmer128_--string-compare=chunk84_--cmov_--no-null-input \
 	--characters=15_--hasher=pearson8
 ifeq ($(os),Linux)
 pht_combinations += \
