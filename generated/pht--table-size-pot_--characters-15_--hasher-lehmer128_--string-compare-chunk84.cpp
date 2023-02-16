@@ -581,10 +581,12 @@ token_type look_up_identifier(const char* identifier, std::size_t size) noexcept
     std::uint32_t last_4_mask = mask >> (8*8);
 #endif
 
-    std::uint64_t comparison = (
-        ((identifier_first_8 & first_8_mask) ^ (entry_first_8 & first_8_mask)) |
-        ((identifier_last_4 & last_4_mask) ^ (entry_last_4 & last_4_mask))
-    );
+    std::uint64_t first_8_comparison =
+        ((identifier_first_8 & first_8_mask) ^ (entry_first_8 & first_8_mask));
+    std::uint64_t last_4_comparison =
+        ((identifier_last_4 & last_4_mask) ^ (entry_last_4 & last_4_mask));
+
+    std::uint64_t comparison = first_8_comparison | last_4_comparison;
     if (comparison == 0) {
         comparison = entry.keyword[size];  // length check
     }

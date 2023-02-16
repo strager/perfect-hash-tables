@@ -597,14 +597,37 @@ token_type look_up_identifier(const char* identifier, std::size_t size) noexcept
     std::uint32_t last_4_mask = mask >> (8*8);
 #endif
 
-    std::uint64_t comparison = (
-        ((identifier_first_8 & first_8_mask) ^ (entry_first_8 & first_8_mask)) |
-        ((identifier_last_4 & last_4_mask) ^ (entry_last_4 & last_4_mask))
+    std::uint64_t first_8_comparison =
+        ((identifier_first_8 & first_8_mask) ^ (entry_first_8 & first_8_mask));
+    std::uint64_t last_4_comparison =
+        ((identifier_last_4 & last_4_mask) ^ (entry_last_4 & last_4_mask));
+)");
+            if (table.strategy.cmov) {
+                std::fprintf(file, "%s", R"(
+    int result = (int)entry.type;
+    __asm__(
+        "or %[last_4_comparison], %[first_8_comparison]\n"
+        "cmovne %[token_type_identifier], %[result]\n"
+
+        : [result]"+r"(result),
+          [first_8_comparison]"+r"(first_8_comparison)
+
+        : [last_4_comparison]"r"(last_4_comparison),
+          [token_type_identifier]"r"((int)token_type::identifier)
+
+        : "cc"   // Clobbered by or.
     );
+    if (entry.keyword[size] != '\0') result = (int)token_type::identifier;  // length check
+    return (token_type)result;
+)");
+            } else {
+                std::fprintf(file, "%s", R"(
+    std::uint64_t comparison = first_8_comparison | last_4_comparison;
     if (comparison == 0) {
         comparison = entry.keyword[size];  // length check
     }
 )");
+            }
             break;
         case string_compare_strategy::sse2:
             std::fprintf(file, "%s", R"(
