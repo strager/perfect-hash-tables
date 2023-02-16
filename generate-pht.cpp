@@ -580,6 +580,7 @@ token_type look_up_identifier(const char* identifier, std::size_t size) noexcept
     std::uint32_t entry_last_4;
     std::memcpy(&entry_last_4, entry.keyword + 8, 4);
 
+#if 0
     // FIXME(strager): GCC emits jumps for this code. Clang emits cmov, which is
     // much better. We should coerce GCC into generating cmov.
     std::uint64_t first_8_mask = 
@@ -590,6 +591,11 @@ token_type look_up_identifier(const char* identifier, std::size_t size) noexcept
         size <= 8
         ? 0
         : (std::uint32_t(1) << ((size-8) * 8)) - 1;
+#else
+    __uint128_t mask = (__uint128_t(1) << (size*8)) - 1;
+    std::uint64_t first_8_mask = mask;
+    std::uint32_t last_4_mask = mask >> (8*8);
+#endif
 
     std::uint64_t comparison = (
         ((identifier_first_8 & first_8_mask) ^ (entry_first_8 & first_8_mask)) |

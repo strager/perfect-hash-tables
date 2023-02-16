@@ -68,6 +68,7 @@ pht_combinations = \
 	--table-size=pot_--characters=23_--hasher=xx364 \
 	--table-size=pot_--characters=27_--hasher=xx364 \
 	--table-size=pot_--characters=29_--hasher=xx364 \
+	--table-size=pot_--characters=15_--hasher=xx364_--string-compare=chunk84 \
 	--table-size=pot_--characters=15_--hasher=fnv1a32 \
 	--table-size=pot_--characters=23_--hasher=fnv1a32 \
 	--table-size=pot_--characters=27_--hasher=fnv1a32 \
