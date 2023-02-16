@@ -256,7 +256,9 @@ class lehmer_128_hasher {
 
     static constexpr std::uint32_t mix(std::uint32_t seed) {
         __uint128_t seed128 = seed;
-        seed128 *= 0xda942042e4dd58b5;
+        // Pierre L’Ecuyer. 1999. Tables of linear congruential generators of different sizes and good lattice structure. Mathematics of Computation of the American Mathematical Society 68, 225 (1999), 249–260.
+        // https://www.ams.org/journals/mcom/1999-68-225/S0025-5718-99-00996-5/S0025-5718-99-00996-5.pdf
+        seed128 *= 4292484099903637661;
         return seed128 >> 64;
     }
 };
