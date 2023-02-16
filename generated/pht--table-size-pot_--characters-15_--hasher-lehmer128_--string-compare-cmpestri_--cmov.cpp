@@ -567,7 +567,7 @@ token_type look_up_identifier(const char* identifier, std::size_t size) noexcept
         : [entry_keyword_at_size]"m"(entry.keyword[size]),
           [token_type_identifier]"r"((int)token_type::identifier)
 
-        : "cc"   // Clobbered by pcmpestrm and cmp.
+        : "cc"   // Clobbered by cmp.
     );
 
     __asm__(
