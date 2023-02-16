@@ -554,18 +554,15 @@ token_type look_up_identifier(const char* identifier, std::size_t size) noexcept
     std::uint32_t index = hash_to_index(h, table_size, sizeof(table_entry), hash_to_index_strategy::modulo);
     const table_entry& entry = table[index];
 
-    ::uint8x16_t zero_to_fifteen = {
-        0, 1, 2, 3, 4, 5, 6, 7,
-        8, 9, 10, 11, 12, 13, 14, 15,
-    };
-    ::uint8x16_t mask = ::vcgtq_u8(::vdupq_n_u8(size), zero_to_fifteen);
-    ::uint8x16_t entry_unmasked;
-    std::memcpy(&entry_unmasked, entry.keyword, 16);
-    ::uint8x16_t identifier_unmasked;
-    std::memcpy(&identifier_unmasked, identifier, 16);
-    ::uint8x16_t compared = ::vandq_u8(::veorq_u8(entry_unmasked, identifier_unmasked), mask);
+    __m128i entry_unmasked = ::_mm_lddqu_si128((const __m128i*)entry.keyword);
+    __m128i identifier_unmasked = ::_mm_lddqu_si128((const __m128i*)identifier);
+    // Calculating the mask this way seems to be much much faster than '(1 << size) - 1'.
+    std::uint32_t inv_mask = ~(std::uint32_t)0 << size;
+    std::uint32_t mask = ~inv_mask;
+    std::uint32_t equal_mask = ::_mm_movemask_epi8(::_mm_cmpeq_epi8(entry_unmasked, identifier_unmasked));
+    std::uint32_t not_equal_mask = ~equal_mask;
 
-    int comparison = vgetq_lane_s64(compared, 0) | vgetq_lane_s64(compared, 1);
+    int comparison = mask & ~equal_mask;
     if (comparison == 0) {
         comparison = entry.keyword[size];  // length check
     }
