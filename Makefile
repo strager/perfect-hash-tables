@@ -59,7 +59,7 @@ gperf_combinations = \
 
 gperf_sos = $(foreach flags,$(gperf_combinations),build/gperf$(subst =,-,$(flags)).so)
 ifeq ($(os),Linux)
-gperf_sos = $(foreach flags,$(gperf_combinations),build/gperf$(subst =,-,$(flags))-clang.so)
+gperf_sos += $(foreach flags,$(gperf_combinations),build/gperf$(subst =,-,$(flags))-clang.so)
 endif
 gperf_cpps = $(foreach flags,$(gperf_combinations),generated/gperf$(subst =,-,$(flags)).cpp)
 
