@@ -545,29 +545,49 @@ constexpr table_entry table[table_size] = {
 
 token_type look_up_identifier(const char* identifier, std::size_t size) noexcept {
 
-    if (size < min_keyword_size || size > max_keyword_size) {
-        return token_type::identifier;
-    }
-
     lehmer_128_hasher hasher(hash_seed);
     hash_selected_characters(character_selection, hasher, identifier, size);
     std::uint32_t h = hasher.hash();
     std::uint32_t index = hash_to_index(h, table_size, sizeof(table_entry), hash_to_index_strategy::modulo);
     const table_entry& entry = table[index];
 
-    if (entry.keyword[0] != identifier[0]) {
-        return token_type::identifier;
-    }
-    int comparison = std::memcmp(identifier + 1, entry.keyword + 1, size - 1);
-    if (comparison == 0) {
-        comparison = entry.keyword[size];  // length check
-    }
+    __m128i entry_unmasked = ::_mm_lddqu_si128((const __m128i*)entry.keyword);
+    __m128i identifier_unmasked = ::_mm_lddqu_si128((const __m128i*)identifier);
+    // Calculating the mask this way seems to be much much faster than '(1 << size) - 1'.
+    std::uint32_t inv_mask = ~(std::uint32_t)0 << size;
+    std::uint32_t mask = ~inv_mask;
+    std::uint32_t equal_mask = ::_mm_movemask_epi8(::_mm_cmpeq_epi8(entry_unmasked, identifier_unmasked));
+    std::uint32_t not_equal_mask = ~equal_mask;
 
-    if (comparison == 0) {
-        return entry.type;
-    } else {
-        return token_type::identifier;
-    }
+    int result = (int)entry.type;
+    __asm__(
+        // If what should be the null terminator is not null, then
+        // (size != strlen(entry.keyword)), so set result to
+        // token_type::identifier.
+        "cmpb $0, %[entry_keyword_at_size]\n"
+        "cmovne %[token_type_identifier], %[result]\n"
+
+        : [result]"+r"(result)
+
+        : [entry_keyword_at_size]"m"(entry.keyword[size]),
+          [token_type_identifier]"r"((int)token_type::identifier)
+
+        : "cc"   // Clobbered by cmp.
+    );
+
+    __asm__(
+        "test %[not_equal_mask], %[mask]\n"
+        "cmovne %[token_type_identifier], %[result]\n"
+
+        : [result]"+r"(result)
+
+        : [not_equal_mask]"r"(not_equal_mask),
+          [mask]"r"(mask),
+          [token_type_identifier]"r"((int)token_type::identifier)
+
+        : "cc"   // Clobbered by test.
+    );
+    return (token_type)result;
 
 }
 }

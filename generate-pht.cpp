@@ -61,6 +61,7 @@ struct table_strategy {
     bool inline_hash;
     bool cmov;
     bool allow_null_in_inputs;
+    bool early_bounds_check;
 };
 
 struct keyword_statistics {
@@ -520,15 +521,22 @@ constexpr table_entry table[table_size] = {
         case hash_to_index_strategy::modulo: hash_to_index = "modulo"; break;
         case hash_to_index_strategy::shiftless: hash_to_index = "shiftless"; break;
     }
-    std::fprintf(file, R"(
+    std::fprintf(file, "%s", R"(
 };
 }
 
 token_type look_up_identifier(const char* identifier, std::size_t size) noexcept {
+)");
+
+    if (table.strategy.early_bounds_check) {
+        std::fprintf(file, "%s", R"(
     if (size < min_keyword_size || size > max_keyword_size) {
         return token_type::identifier;
     }
+)");
+    }
 
+    std::fprintf(file, R"(
     %s hasher(hash_seed);
     hash_selected_characters(character_selection, hasher, identifier, size);
     std::uint32_t h = hasher.hash();
@@ -889,24 +897,26 @@ void go(int argc, char** argv) {
     };
 
     static constexpr ::option long_options[] = {
-        {"characters",      required_argument, 0, 'c' },
-        {"entry-size",      required_argument, 0, 'z' },
-        {"hasher",          required_argument, 0, 'h' },
-        {"output",          required_argument, 0, 'o' },
-        {"string-compare",  required_argument, 0, 's' },
-        {"table-size",      required_argument, 0, 't' },
-        {"iterations",      required_argument, 0, 'I' },
-        {"cmov",            no_argument,       0, 'C' },
-        {"inline-hash",     no_argument,       0, 'i' },
-        {"no-null-input",   no_argument,       0, 'N' },
-        {"shiftless-index", no_argument,       0, 'l' },
-        {nullptr,           0,                 0, 0   }
+        {"characters",            required_argument, 0, 'c' },
+        {"entry-size",            required_argument, 0, 'z' },
+        {"hasher",                required_argument, 0, 'h' },
+        {"output",                required_argument, 0, 'o' },
+        {"string-compare",        required_argument, 0, 's' },
+        {"table-size",            required_argument, 0, 't' },
+        {"iterations",            required_argument, 0, 'I' },
+        {"cmov",                  no_argument,       0, 'C' },
+        {"inline-hash",           no_argument,       0, 'i' },
+        {"no-early-bounds-check", no_argument,       0, 'b' },
+        {"no-null-input",         no_argument,       0, 'N' },
+        {"shiftless-index",       no_argument,       0, 'l' },
+        {nullptr,                 0,                 0, 0   }
     };
 
     const char* out_file_path = nullptr;
     bool inline_hash = false;
     bool cmov = false;
     bool allow_null_in_inputs = true;
+    bool early_bounds_check = true;
     hash_to_index_strategy hash_to_index = hash_to_index_strategy::modulo;
     string_compare_strategy string_compare = string_compare_strategy::memcmp;
     std::optional<table_size_strategy> size_strategy;
@@ -973,6 +983,10 @@ void go(int argc, char** argv) {
 
             case 'l':
                 hash_to_index = hash_to_index_strategy::shiftless;
+                break;
+
+            case 'b':
+                early_bounds_check = false;
                 break;
 
             case 'N':
@@ -1063,6 +1077,7 @@ done_parsing:
         .inline_hash = inline_hash,
         .cmov = cmov,
         .allow_null_in_inputs = allow_null_in_inputs,
+        .early_bounds_check = early_bounds_check,
     };
 
     keyword_statistics stats = make_stats();

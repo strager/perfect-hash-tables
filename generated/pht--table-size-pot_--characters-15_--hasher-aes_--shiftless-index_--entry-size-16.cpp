@@ -546,6 +546,7 @@ constexpr table_entry table[table_size] = {
 }
 
 token_type look_up_identifier(const char* identifier, std::size_t size) noexcept {
+
     if (size < min_keyword_size || size > max_keyword_size) {
         return token_type::identifier;
     }

@@ -545,29 +545,61 @@ constexpr table_entry table[table_size] = {
 
 token_type look_up_identifier(const char* identifier, std::size_t size) noexcept {
 
-    if (size < min_keyword_size || size > max_keyword_size) {
-        return token_type::identifier;
-    }
-
     lehmer_128_hasher hasher(hash_seed);
     hash_selected_characters(character_selection, hasher, identifier, size);
     std::uint32_t h = hasher.hash();
     std::uint32_t index = hash_to_index(h, table_size, sizeof(table_entry), hash_to_index_strategy::modulo);
     const table_entry& entry = table[index];
 
-    if (entry.keyword[0] != identifier[0]) {
-        return token_type::identifier;
-    }
-    int comparison = std::memcmp(identifier + 1, entry.keyword + 1, size - 1);
-    if (comparison == 0) {
-        comparison = entry.keyword[size];  // length check
-    }
+    std::uint64_t identifier_first_8;
+    std::memcpy(&identifier_first_8, identifier, 8);
+    std::uint32_t identifier_last_4;
+    std::memcpy(&identifier_last_4, identifier + 8, 4);
 
-    if (comparison == 0) {
-        return entry.type;
-    } else {
-        return token_type::identifier;
-    }
+    std::uint64_t entry_first_8;
+    std::memcpy(&entry_first_8, entry.keyword, 8);
+    std::uint32_t entry_last_4;
+    std::memcpy(&entry_last_4, entry.keyword + 8, 4);
+
+#if 0
+    // FIXME(strager): GCC emits jumps for this code. Clang emits cmov, which is
+    // much better. We should coerce GCC into generating cmov.
+    std::uint64_t first_8_mask = 
+        size >= 8
+        ? 0xffff'ffff'ffff'ffffULL
+        : (std::uint64_t(1) << (size * 8)) - 1;
+    std::uint32_t last_4_mask =
+        size <= 8
+        ? 0
+        : (std::uint32_t(1) << ((size-8) * 8)) - 1;
+#else
+    __uint128_t mask = (__uint128_t(1) << (size*8)) - 1;
+    std::uint64_t first_8_mask = mask;
+    std::uint32_t last_4_mask = mask >> (8*8);
+#endif
+
+    std::uint64_t first_8_comparison =
+        ((identifier_first_8 & first_8_mask) ^ (entry_first_8 & first_8_mask));
+    std::uint64_t last_4_comparison =
+        ((identifier_last_4 & last_4_mask) ^ (entry_last_4 & last_4_mask));
+
+    int result = (int)entry.type;
+    __asm__(
+        "or %[last_4_comparison], %[first_8_comparison]\n"
+        "cmovne %[token_type_identifier], %[result]\n"
+
+        : [result]"+r"(result),
+          [first_8_comparison]"+r"(first_8_comparison)
+
+        : [last_4_comparison]"r"(last_4_comparison),
+          [token_type_identifier]"r"((int)token_type::identifier)
+
+        : "cc"   // Clobbered by or.
+    );
+
+    if (entry.keyword[size] != '\0') result = (int)token_type::identifier;  // length check
+
+    return (token_type)result;
 
 }
 }

@@ -545,29 +545,49 @@ constexpr table_entry table[table_size] = {
 
 token_type look_up_identifier(const char* identifier, std::size_t size) noexcept {
 
-    if (size < min_keyword_size || size > max_keyword_size) {
-        return token_type::identifier;
-    }
-
     lehmer_128_hasher hasher(hash_seed);
     hash_selected_characters(character_selection, hasher, identifier, size);
     std::uint32_t h = hasher.hash();
     std::uint32_t index = hash_to_index(h, table_size, sizeof(table_entry), hash_to_index_strategy::modulo);
     const table_entry& entry = table[index];
 
-    if (entry.keyword[0] != identifier[0]) {
-        return token_type::identifier;
-    }
-    int comparison = std::memcmp(identifier + 1, entry.keyword + 1, size - 1);
-    if (comparison == 0) {
-        comparison = entry.keyword[size];  // length check
-    }
+    int result = (int)entry.type;
+    __asm__(
+        // If what should be the null terminator is not null, then
+        // (size != strlen(entry.keyword)), so set result to
+        // token_type::identifier.
+        "cmpb $0, %[entry_keyword_at_size]\n"
+        "cmovne %[token_type_identifier], %[result]\n"
 
-    if (comparison == 0) {
-        return entry.type;
-    } else {
-        return token_type::identifier;
-    }
+        : [result]"+r"(result)
+
+        : [entry_keyword_at_size]"m"(entry.keyword[size]),
+          [token_type_identifier]"r"((int)token_type::identifier)
+
+        : "cc"   // Clobbered by cmp.
+    );
+
+    __asm__(
+        // Compare the entry.keyword and identifier strings.
+        // %eax: size of %[entry_keyword].
+        // %edx: size of %[identifier].
+        "pcmpestrm %[cmpestrm_flags], %[entry_keyword], %[identifier]\n"
+        // Move if cmpestr's mask was non-zero.
+        "cmovc %[token_type_identifier], %[result]\n"
+
+        : [result]"+r"(result)
+
+        : [identifier]"x"(::_mm_lddqu_si128((const __m128i*)identifier)),
+          [entry_keyword]"x"(::_mm_lddqu_si128((const __m128i*)entry.keyword)),
+          [token_type_identifier]"r"((int)token_type::identifier),
+          [cmpestrm_flags]"i"(_SIDD_UBYTE_OPS | _SIDD_CMP_EQUAL_EACH | _SIDD_NEGATIVE_POLARITY),
+          "a"(size), // %eax: size of %[entry_keyword].
+          "d"(size)  // %edx: size of %[identifier].
+
+        : "cc",   // Clobbered by pcmpestrm.
+          "xmm0"  // Clobbered by pcmpestrm.
+    );
+    return (token_type)result;
 
 }
 }

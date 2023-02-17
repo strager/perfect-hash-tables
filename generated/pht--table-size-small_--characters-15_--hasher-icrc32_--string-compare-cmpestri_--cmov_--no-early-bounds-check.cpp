@@ -295,24 +295,11 @@ constexpr table_entry table[table_size] = {
 
 token_type look_up_identifier(const char* identifier, std::size_t size) noexcept {
 
-    if (size < min_keyword_size || size > max_keyword_size) {
-        return token_type::identifier;
-    }
-
     intel_crc32_intrinsic_hasher hasher(hash_seed);
     hash_selected_characters(character_selection, hasher, identifier, size);
     std::uint32_t h = hasher.hash();
     std::uint32_t index = hash_to_index(h, table_size, sizeof(table_entry), hash_to_index_strategy::modulo);
     const table_entry& entry = table[index];
-
-    __m128i mask = ::_mm_cmpgt_epi8(
-        ::_mm_set1_epi8(size),
-        ::_mm_setr_epi8(
-            0, 1, 2, 3, 4, 5, 6, 7,
-            8, 9, 10, 11, 12, 13, 14, 15));
-    __m128i entry_unmasked = ::_mm_lddqu_si128((const __m128i*)entry.keyword);
-    __m128i identifier_unmasked = ::_mm_lddqu_si128((const __m128i*)identifier);
-    __m128i compared = ::_mm_xor_si128(entry_unmasked, identifier_unmasked);
 
     int result = (int)entry.type;
     __asm__(
@@ -332,16 +319,23 @@ token_type look_up_identifier(const char* identifier, std::size_t size) noexcept
 
     __asm__(
         // Compare the entry.keyword and identifier strings.
-        "ptest %[compared], %[mask]\n"
-        "cmovne %[token_type_identifier], %[result]\n"
+        // %eax: size of %[entry_keyword].
+        // %edx: size of %[identifier].
+        "pcmpestrm %[cmpestrm_flags], %[entry_keyword], %[identifier]\n"
+        // Move if cmpestr's mask was non-zero.
+        "cmovc %[token_type_identifier], %[result]\n"
 
         : [result]"+r"(result)
 
-        : [compared]"x"(compared),
-          [mask]"x"(mask),
-          [token_type_identifier]"r"((int)token_type::identifier)
+        : [identifier]"x"(::_mm_lddqu_si128((const __m128i*)identifier)),
+          [entry_keyword]"x"(::_mm_lddqu_si128((const __m128i*)entry.keyword)),
+          [token_type_identifier]"r"((int)token_type::identifier),
+          [cmpestrm_flags]"i"(_SIDD_UBYTE_OPS | _SIDD_CMP_EQUAL_EACH | _SIDD_NEGATIVE_POLARITY),
+          "a"(size), // %eax: size of %[entry_keyword].
+          "d"(size)  // %edx: size of %[identifier].
 
-        : "cc"   // Clobbered by ptest.
+        : "cc",   // Clobbered by pcmpestrm.
+          "xmm0"  // Clobbered by pcmpestrm.
     );
     return (token_type)result;
 
