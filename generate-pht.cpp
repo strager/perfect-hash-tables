@@ -56,6 +56,7 @@ struct table_strategy {
     string_compare_strategy string_compare;
     hash_to_index_strategy hash_to_index;
     std::optional<unsigned> entry_size;
+    int max_attempts_per_size;
     bool inline_hash;
     bool cmov;
     bool allow_null_in_inputs;
@@ -376,7 +377,7 @@ fail:
                 std::size(keyword_tokens));
             std::exit(1);
         }
-        int max_attempts_per_size = 50'000;
+        int max_attempts_per_size = table.strategy.max_attempts_per_size;
         int attempts = try_build_table(table, max_attempts_per_size);
         table.total_attempts += attempts;
         if (attempts < max_attempts_per_size) {
@@ -893,6 +894,7 @@ void go(int argc, char** argv) {
         {"output",          required_argument, 0, 'o' },
         {"string-compare",  required_argument, 0, 's' },
         {"table-size",      required_argument, 0, 't' },
+        {"iterations",      required_argument, 0, 'I' },
         {"cmov",            no_argument,       0, 'C' },
         {"inline-hash",     no_argument,       0, 'i' },
         {"no-null-input",   no_argument,       0, 'N' },
@@ -910,6 +912,7 @@ void go(int argc, char** argv) {
     std::optional<character_selection_mask> character_selection;
     std::optional<hash_strategy> hasher;
     std::optional<unsigned> entry_size;
+    int max_attempts_per_size = 50'000;
 
     for (;;) {
         int long_index = 0;
@@ -936,6 +939,16 @@ void go(int argc, char** argv) {
                 std::from_chars_result r = std::from_chars(optarg, optarg_end, *entry_size);
                 if (r.ptr != optarg_end || r.ec != std::errc()) {
                     std::fprintf(stderr, "error: cannot parse entry size: %s", optarg);
+                    std::exit(1);
+                }
+                break;
+            }
+
+            case 'I': {
+                const char* optarg_end = optarg + std::strlen(optarg);
+                std::from_chars_result r = std::from_chars(optarg, optarg_end, max_attempts_per_size);
+                if (r.ptr != optarg_end || r.ec != std::errc()) {
+                    std::fprintf(stderr, "error: cannot iteration count: %s", optarg);
                     std::exit(1);
                 }
                 break;
@@ -1037,6 +1050,7 @@ done_parsing:
         .string_compare = string_compare,
         .hash_to_index = hash_to_index,
         .entry_size = entry_size,
+        .max_attempts_per_size = max_attempts_per_size,
         .inline_hash = inline_hash,
         .cmov = cmov,
         .allow_null_in_inputs = allow_null_in_inputs,
