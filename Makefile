@@ -123,9 +123,9 @@ pht_combinations += \
 	--table-size=pot_--characters=29_--hasher=aes \
 	--table-size=pot_--characters=15_--hasher=aes_--entry-size=16 \
 	--table-size=pot_--characters=15_--hasher=aes_--shiftless-index_--entry-size=16 \
-	--table-size=pot_--characters=15_--hasher=aes_--string-compare=ptest \
-	--table-size=pot_--characters=15_--hasher=aes_--string-compare=ptest_--entry-size=16 \
-	--table-size=pot_--characters=15_--hasher=aes_--string-compare=ptest_--shiftless-index_--entry-size=16
+	--table-size=pot_--characters=15_--hasher=aes_--string-compare=ptest_--cmov \
+	--table-size=pot_--characters=15_--hasher=aes_--string-compare=ptest_--cmov_--entry-size=16 \
+	--table-size=pot_--characters=15_--hasher=aes_--string-compare=ptest_--cmov_--shiftless-index_--entry-size=16
 endif
 ifeq ($(os),Darwin)
 pht_combinations += \

@@ -564,16 +564,36 @@ token_type look_up_identifier(const char* identifier, std::size_t size) noexcept
     __m128i identifier_unmasked = ::_mm_lddqu_si128((const __m128i*)identifier);
     __m128i compared = ::_mm_xor_si128(entry_unmasked, identifier_unmasked);
 
-    int comparison = ::_mm_test_all_zeros(mask, compared) != 1;
-    if (comparison == 0) {
-        comparison = entry.keyword[size];  // length check
-    }
+    int result = (int)entry.type;
+    __asm__(
+        // If what should be the null terminator is not null, then
+        // (size != strlen(entry.keyword)), so set result to
+        // token_type::identifier.
+        "cmpb $0, %[entry_keyword_at_size]\n"
+        "cmovne %[token_type_identifier], %[result]\n"
 
-    if (comparison == 0) {
-        return entry.type;
-    } else {
-        return token_type::identifier;
-    }
+        : [result]"+r"(result)
+
+        : [entry_keyword_at_size]"m"(entry.keyword[size]),
+          [token_type_identifier]"r"((int)token_type::identifier)
+
+        : "cc"   // Clobbered by cmp.
+    );
+
+    __asm__(
+        // Compare the entry.keyword and identifier strings.
+        "ptest %[compared], %[mask]\n"
+        "cmovne %[token_type_identifier], %[result]\n"
+
+        : [result]"+r"(result)
+
+        : [compared]"x"(compared),
+          [mask]"x"(mask),
+          [token_type_identifier]"r"((int)token_type::identifier)
+
+        : "cc"   // Clobbered by ptest.
+    );
+    return (token_type)result;
 
 }
 }
