@@ -22,10 +22,11 @@
 
 namespace pht {
 namespace {
-enum class table_size_strategy {
+enum table_size_strategy : unsigned long {
     smallest,
     power_of_2,
-    fixed_256,  // for hash_strategy::pearson_8
+
+    // Bigger numbers: exact size
 };
 
 enum class hash_strategy {
@@ -363,8 +364,8 @@ perfect_hash_table make_perfect_hash_table(const keyword_statistics& stats, tabl
         case table_size_strategy::power_of_2:
             table.table_size = std::bit_ceil(std::size(keyword_tokens));
             break;
-        case table_size_strategy::fixed_256:
-            table.table_size = 256;
+        default:  // Fixed size.
+            table.table_size = (unsigned long)strategy.size_strategy;
             break;
     }
     for (;;) {
@@ -390,7 +391,7 @@ fail:
             case table_size_strategy::power_of_2:
                 table.table_size *= 2;
                 break;
-            case table_size_strategy::fixed_256:
+            default:  // Fixed size.
                 goto fail;
         }
     }
@@ -991,12 +992,20 @@ void go(int argc, char** argv) {
                 });
                 break;
 
-            case 't':
-                size_strategy = look_up_or_die(optarg, "--table-size", std::map<std::string_view, table_size_strategy>{
-                    {"small", table_size_strategy::smallest},
-                    {"pot", table_size_strategy::power_of_2},
-                });
+            case 't': {
+                const char* optarg_end = optarg + std::strlen(optarg);
+                int table_size;
+                std::from_chars_result r = std::from_chars(optarg, optarg_end, table_size);
+                if (r.ptr != optarg_end || r.ec != std::errc()) {
+                    size_strategy = look_up_or_die(optarg, "--table-size", std::map<std::string_view, table_size_strategy>{
+                        {"small", table_size_strategy::smallest},
+                        {"pot", table_size_strategy::power_of_2},
+                    });
+                } else {
+                    size_strategy = (table_size_strategy)table_size;
+                }
                 break;
+            }
 
             case 'o':
                 out_file_path = optarg;
@@ -1031,7 +1040,7 @@ done_parsing:
             std::fprintf(stderr, "error: --table-size incompatible with --hasher=pearson8\n");
             std::exit(1);
         }
-        size_strategy = table_size_strategy::fixed_256;
+        size_strategy = (table_size_strategy)256;
         if (inline_hash) {
             std::fprintf(stderr, "error: --inline-hash incompatible with --hasher=pearson8\n");
             std::exit(1);

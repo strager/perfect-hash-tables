@@ -105,6 +105,7 @@ pht_combinations += \
 	--table-size=small_--characters=15_--hasher=icrc32_--string-compare=cmpestri_--cmov \
 	--table-size=small_--characters=15_--hasher=icrc32_--string-compare=sse2_--cmov \
 	--table-size=small_--characters=15_--hasher=icrc32_--string-compare=ptest_--cmov \
+	--table-size=194_--characters=15_--hasher=icrc32_--string-compare=ptest_--cmov_--iterations=10000000 \
 	--table-size=small_--characters=15_--hasher=aes \
 	--table-size=small_--characters=23_--hasher=aes \
 	--table-size=small_--characters=27_--hasher=aes \
