@@ -314,6 +314,26 @@ token_type look_up_identifier(const char* identifier, std::size_t size) noexcept
 
     int result = (int)entry.type;
 
+#if defined(__x86_64__)
+    auto check_length_cmov = [&]() -> void {
+        __asm__(
+            // If what should be the null terminator is not null, then
+            // (size != strlen(entry.keyword)), so set result to
+            // token_type::identifier.
+            "cmpb $0, %[entry_keyword_at_size]\n"
+            "cmovne %[token_type_identifier], %[result]\n"
+
+            : [result]"+r"(result)
+
+            : [entry_keyword_at_size]"m"(entry.keyword[size]),
+              [token_type_identifier]"r"((int)token_type::identifier)
+
+            : "cc"   // Clobbered by cmp.
+        );
+    };
+#endif
+
+
     if (h != entry.hash) {
         return token_type::identifier;
     }
