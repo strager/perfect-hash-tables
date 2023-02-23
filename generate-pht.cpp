@@ -59,6 +59,7 @@ struct table_strategy {
     std::optional<unsigned> entry_size;
     int max_attempts_per_size;
     bool inline_hash;
+    bool keyword_size_in_entry;
     bool cmov;
     bool allow_null_in_inputs;
     bool early_bounds_check;
@@ -444,11 +445,18 @@ struct table_entry {
     std::uint32_t hash;
 )");
     }
-    bool need_null_terminator = true;
+    bool need_null_terminator = !table.strategy.keyword_size_in_entry;
     std::fprintf(file, R"(
     const char keyword[max_keyword_size + %d];
-    token_type type;
 )", need_null_terminator ? 1 : 0);
+    if (table.strategy.keyword_size_in_entry) {
+        std::fprintf(file, "%s", R"(
+    std::uint8_t keyword_length;
+)");
+    }
+    std::fprintf(file, "%s", R"(
+    token_type type;
+)");
     if (table.entry_padding > 0) {
         std::fprintf(file, "    char padding[%u];\n", table.entry_padding);
     }
@@ -471,7 +479,11 @@ constexpr table_entry table[table_size] = {
             if (table.strategy.inline_hash) {
                 std::fprintf(file, "0U, ");
             }
-            std::fprintf(file, "\"\", token_type::identifier},\n");
+            std::fprintf(file, "\"\", ");
+            if (table.strategy.keyword_size_in_entry) {
+                std::fprintf(file, "%zu, ", entry.keyword.size());
+            }
+            std::fprintf(file, "token_type::identifier},\n");
         } else {
             if (table.strategy.inline_hash) {
                 std::fprintf(file, "%luU, ", (unsigned long)entry.hash);
@@ -500,8 +512,12 @@ constexpr table_entry table[table_size] = {
                     std::fprintf(file, "'%c',", c);
                 }
             }
+            std::fprintf(file, "}, ");
+            if (table.strategy.keyword_size_in_entry) {
+                std::fprintf(file, "%zu, ", entry.keyword.size());
+            }
             std::fprintf(
-                    file, "}, token_type::kw_%*s},\n",
+                    file, "token_type::kw_%*s},\n",
                     (int)entry.keyword.size(), entry.keyword.data());
         }
     }
@@ -546,13 +562,41 @@ token_type look_up_identifier(const char* identifier, std::size_t size) noexcept
     const table_entry& entry = table[index];
 
     auto length_ok = [&]() -> bool {
+)");
+    if (table.strategy.keyword_size_in_entry) {
+        std::fprintf(file, "%s", R"(
+        return size == entry.keyword_length;
+)");
+    } else {
+        std::fprintf(file, "%s", R"(
         return entry.keyword[size] == '\0';
+)");
+    }
+    std::fprintf(file, "%s", R"(
     };
 
     int result = (int)entry.type;
 
 #if defined(__x86_64__)
     auto check_length_cmov = [&]() -> void {
+)");
+    if (table.strategy.keyword_size_in_entry) {
+        std::fprintf(file, "%s", R"(
+        __asm__(
+            "cmpq %[size], %[entry_keyword_length]\n"
+            "cmovne %[token_type_identifier], %[result]\n"
+
+            : [result]"+r"(result)
+
+            : [entry_keyword_length]"r"((unsigned long)entry.keyword_length),
+              [size]"r"((unsigned long)size),
+              [token_type_identifier]"r"((int)token_type::identifier)
+
+            : "cc"   // Clobbered by cmp.
+        );
+)");
+    } else {
+        std::fprintf(file, "%s", R"(
         __asm__(
             // If what should be the null terminator is not null, then
             // (size != strlen(entry.keyword)), so set result to
@@ -567,6 +611,9 @@ token_type look_up_identifier(const char* identifier, std::size_t size) noexcept
 
             : "cc"   // Clobbered by cmp.
         );
+)");
+    }
+    std::fprintf(file, "%s", R"(
     };
 #endif
 
@@ -874,6 +921,7 @@ void go(int argc, char** argv) {
         {"iterations",            required_argument, 0, 'I' },
         {"cmov",                  no_argument,       0, 'C' },
         {"inline-hash",           no_argument,       0, 'i' },
+        {"keyword-size-in-entry", no_argument,       0, 'Z' },
         {"no-early-bounds-check", no_argument,       0, 'b' },
         {"no-null-input",         no_argument,       0, 'N' },
         {"shiftless-index",       no_argument,       0, 'l' },
@@ -882,6 +930,7 @@ void go(int argc, char** argv) {
 
     const char* out_file_path = nullptr;
     bool inline_hash = false;
+    bool keyword_size_in_entry = false;
     bool cmov = false;
     bool allow_null_in_inputs = true;
     bool early_bounds_check = true;
@@ -947,6 +996,10 @@ void go(int argc, char** argv) {
 
             case 'i':
                 inline_hash = true;
+                break;
+
+            case 'Z':
+                keyword_size_in_entry = true;
                 break;
 
             case 'l':
@@ -1043,6 +1096,7 @@ done_parsing:
         .entry_size = entry_size,
         .max_attempts_per_size = max_attempts_per_size,
         .inline_hash = inline_hash,
+        .keyword_size_in_entry = keyword_size_in_entry,
         .cmov = cmov,
         .allow_null_in_inputs = allow_null_in_inputs,
         .early_bounds_check = early_bounds_check,

@@ -23,6 +23,7 @@ constexpr std::uint32_t hash_seed = 2166182962UL;
 struct table_entry {
 
     const char keyword[max_keyword_size + 1];
+
     token_type type;
 };
 
@@ -301,13 +302,16 @@ token_type look_up_identifier(const char* identifier, std::size_t size) noexcept
     const table_entry& entry = table[index];
 
     auto length_ok = [&]() -> bool {
+
         return entry.keyword[size] == '\0';
+
     };
 
     int result = (int)entry.type;
 
 #if defined(__x86_64__)
     auto check_length_cmov = [&]() -> void {
+
         __asm__(
             // If what should be the null terminator is not null, then
             // (size != strlen(entry.keyword)), so set result to
@@ -322,6 +326,7 @@ token_type look_up_identifier(const char* identifier, std::size_t size) noexcept
 
             : "cc"   // Clobbered by cmp.
         );
+
     };
 #endif
 
