@@ -553,7 +553,9 @@ token_type look_up_identifier(const char* identifier, std::size_t size) noexcept
     hash_selected_characters(character_selection, hasher, identifier, size);
     std::uint32_t h = hasher.hash();
     std::uint32_t index = hash_to_index(h, table_size, sizeof(table_entry), hash_to_index_strategy::modulo);
+
     const table_entry& entry = table[index];
+    int result = (int)entry.type;
 
     std::uint16_t entry_first_two;
     std::memcpy(&entry_first_two, entry.keyword, 2);

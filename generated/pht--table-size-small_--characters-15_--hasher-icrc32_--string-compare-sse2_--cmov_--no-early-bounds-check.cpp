@@ -299,7 +299,9 @@ token_type look_up_identifier(const char* identifier, std::size_t size) noexcept
     hash_selected_characters(character_selection, hasher, identifier, size);
     std::uint32_t h = hasher.hash();
     std::uint32_t index = hash_to_index(h, table_size, sizeof(table_entry), hash_to_index_strategy::modulo);
+
     const table_entry& entry = table[index];
+    int result = (int)entry.type;
 
     __m128i entry_unmasked = ::_mm_lddqu_si128((const __m128i*)entry.keyword);
     __m128i identifier_unmasked = ::_mm_lddqu_si128((const __m128i*)identifier);
@@ -309,7 +311,6 @@ token_type look_up_identifier(const char* identifier, std::size_t size) noexcept
     std::uint32_t equal_mask = ::_mm_movemask_epi8(::_mm_cmpeq_epi8(entry_unmasked, identifier_unmasked));
     std::uint32_t not_equal_mask = ~equal_mask;
 
-    int result = (int)entry.type;
     __asm__(
         // If what should be the null terminator is not null, then
         // (size != strlen(entry.keyword)), so set result to

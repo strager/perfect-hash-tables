@@ -542,7 +542,10 @@ token_type look_up_identifier(const char* identifier, std::size_t size) noexcept
     std::uint32_t h = hasher.hash();
     std::uint32_t index = hash_to_index(h, table_size, sizeof(table_entry), hash_to_index_strategy::%s);
 )", hasher_class, hash_to_index);
-    std::fprintf(file, "    const table_entry& entry = table[index];\n");
+    std::fprintf(file, "%s", R"(
+    const table_entry& entry = table[index];
+    int result = (int)entry.type;
+)");
     if (table.strategy.inline_hash) {
         std::fprintf(file, "%s", R"(
     if (h != entry.hash) {
@@ -631,7 +634,6 @@ token_type look_up_identifier(const char* identifier, std::size_t size) noexcept
             }
             if (table.strategy.cmov) {
                 std::fprintf(file, "%s", R"(
-    int result = (int)entry.type;
     __asm__(
         "or %[last_4_comparison], %[first_8_comparison]\n"
         "cmovne %[token_type_identifier], %[result]\n"
@@ -678,7 +680,6 @@ token_type look_up_identifier(const char* identifier, std::size_t size) noexcept
 )");
             if (table.strategy.cmov) {
                 std::fprintf(file, "%s", R"(
-    int result = (int)entry.type;
     __asm__(
         // If what should be the null terminator is not null, then
         // (size != strlen(entry.keyword)), so set result to
@@ -730,7 +731,6 @@ token_type look_up_identifier(const char* identifier, std::size_t size) noexcept
 )");
             if (table.strategy.cmov) {
                 std::fprintf(file, "%s", R"(
-    int result = (int)entry.type;
     __asm__(
         // If what should be the null terminator is not null, then
         // (size != strlen(entry.keyword)), so set result to
@@ -773,7 +773,6 @@ token_type look_up_identifier(const char* identifier, std::size_t size) noexcept
         case string_compare_strategy::cmpestri:
             if (table.strategy.cmov) {
                 std::fprintf(file, "%s", R"(
-    int result = (int)entry.type;
     __asm__(
         // If what should be the null terminator is not null, then
         // (size != strlen(entry.keyword)), so set result to
@@ -840,14 +839,13 @@ token_type look_up_identifier(const char* identifier, std::size_t size) noexcept
 )");
             if (table.strategy.cmov) {
                 std::fprintf(file, "%s", R"(
-    token_type result = entry.type;
     if (vgetq_lane_s64(compared, 0) | vgetq_lane_s64(compared, 1)) {
-        result = token_type::identifier;
+        result = (int)token_type::identifier;
     }
     if (entry.keyword[size]) {  // length check
-        result = token_type::identifier;
+        result = (int)token_type::identifier;
     }
-    return result;
+    return (token_type)result;
 )");
             } else {
                 std::fprintf(file, "%s", R"(

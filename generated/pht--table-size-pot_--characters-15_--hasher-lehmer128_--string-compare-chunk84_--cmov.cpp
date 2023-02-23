@@ -553,7 +553,9 @@ token_type look_up_identifier(const char* identifier, std::size_t size) noexcept
     hash_selected_characters(character_selection, hasher, identifier, size);
     std::uint32_t h = hasher.hash();
     std::uint32_t index = hash_to_index(h, table_size, sizeof(table_entry), hash_to_index_strategy::modulo);
+
     const table_entry& entry = table[index];
+    int result = (int)entry.type;
 
     std::uint64_t identifier_first_8;
     std::memcpy(&identifier_first_8, identifier, 8);
@@ -587,7 +589,6 @@ token_type look_up_identifier(const char* identifier, std::size_t size) noexcept
     std::uint64_t last_4_comparison =
         ((identifier_last_4 & last_4_mask) ^ (entry_last_4 & last_4_mask));
 
-    int result = (int)entry.type;
     __asm__(
         "or %[last_4_comparison], %[first_8_comparison]\n"
         "cmovne %[token_type_identifier], %[result]\n"
