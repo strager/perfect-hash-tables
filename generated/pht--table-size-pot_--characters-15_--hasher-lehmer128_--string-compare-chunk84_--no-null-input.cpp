@@ -591,11 +591,10 @@ token_type look_up_identifier(const char* identifier, std::size_t size) noexcept
 
     std::uint64_t comparison = first_8_comparison | last_4_comparison;
 
-    if (comparison == 0) {
-        return entry.type;
-    } else {
-        return token_type::identifier;
+    if (comparison != 0) {
+        result = (int)token_type::identifier;
     }
+    return (token_type)result;
 
 }
 }
