@@ -631,7 +631,7 @@ token_type look_up_identifier(const char* identifier, std::size_t size) noexcept
     if (entry.keyword[0] != identifier[0]
         || std::memcmp(identifier + 1, entry.keyword + 1, size - 1) != 0
         || !length_ok()) {
-        result = (int)token_type::identifier;
+        return token_type::identifier;
     }
 )");
             break;
@@ -644,7 +644,7 @@ token_type look_up_identifier(const char* identifier, std::size_t size) noexcept
     if (entry_first_two != identifier_first_two
         || std::memcmp(identifier + 2, entry.keyword + 2, size - 2) != 0
         || !length_ok()) {
-        result = (int)token_type::identifier;
+        return token_type::identifier;
     }
 )");
             break;
@@ -652,7 +652,7 @@ token_type look_up_identifier(const char* identifier, std::size_t size) noexcept
             std::fprintf(file, "%s", R"(
     if (std::memcmp(identifier, entry.keyword, size) != 0
         || !length_ok()) {
-        result = (int)token_type::identifier;
+        return token_type::identifier;
     }
 )");
             break;
@@ -731,7 +731,7 @@ token_type look_up_identifier(const char* identifier, std::size_t size) noexcept
                 }
                 std::fprintf(file, "%s", R"(
     ) {
-        result = (int)token_type::identifier;
+        return token_type::identifier;
     }
 )");
             }
@@ -767,7 +767,7 @@ token_type look_up_identifier(const char* identifier, std::size_t size) noexcept
                 std::fprintf(file, "%s", R"(
     if ((mask & ~equal_mask) != 0
         || !length_ok()) {
-        result = (int)token_type::identifier;
+        return token_type::identifier;
     }
 )");
             }
@@ -805,7 +805,7 @@ token_type look_up_identifier(const char* identifier, std::size_t size) noexcept
                 std::fprintf(file, "%s", R"(
     if (::_mm_test_all_zeros(mask, compared) == 0
         || !length_ok()) {
-        result = (int)token_type::identifier;
+        return token_type::identifier;
     }
 )");
             }
@@ -845,7 +845,7 @@ token_type look_up_identifier(const char* identifier, std::size_t size) noexcept
         size,
         _SIDD_UBYTE_OPS | _SIDD_CMP_EQUAL_EACH | _SIDD_NEGATIVE_POLARITY)
         || !length_ok()) {
-        result = (int)token_type::identifier;
+        return token_type::identifier;
     }
 )");
             }

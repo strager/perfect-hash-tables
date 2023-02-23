@@ -598,7 +598,7 @@ token_type look_up_identifier(const char* identifier, std::size_t size) noexcept
 
     if (::_mm_test_all_zeros(mask, compared) == 0
         || !length_ok()) {
-        result = (int)token_type::identifier;
+        return token_type::identifier;
     }
 
     return (token_type)result;

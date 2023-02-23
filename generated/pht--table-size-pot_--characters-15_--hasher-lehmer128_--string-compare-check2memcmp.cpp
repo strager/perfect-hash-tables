@@ -594,7 +594,7 @@ token_type look_up_identifier(const char* identifier, std::size_t size) noexcept
     if (entry_first_two != identifier_first_two
         || std::memcmp(identifier + 2, entry.keyword + 2, size - 2) != 0
         || !length_ok()) {
-        result = (int)token_type::identifier;
+        return token_type::identifier;
     }
 
     return (token_type)result;

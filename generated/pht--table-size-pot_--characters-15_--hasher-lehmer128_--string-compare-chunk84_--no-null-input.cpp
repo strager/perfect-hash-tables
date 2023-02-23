@@ -622,7 +622,7 @@ token_type look_up_identifier(const char* identifier, std::size_t size) noexcept
     if ((first_8_comparison | last_4_comparison)
 
     ) {
-        result = (int)token_type::identifier;
+        return token_type::identifier;
     }
 
     return (token_type)result;
