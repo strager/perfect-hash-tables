@@ -7,6 +7,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <dlfcn.h>
+#include <string>
 
 namespace pht {
 namespace {
@@ -48,6 +49,12 @@ void test_look_up_identifier(const char* name, look_up_identifier_f* look_up_ide
     for (const test_case& test : test_cases) {
         std::size_t length = std::strlen(test.identifier);
         check(test.identifier, length, test.expected);
+    }
+
+    for (std::size_t identifier_length : {1<<10, 4<<10, 8<<10, 1<<20}) {
+        std::string identifier(identifier_length, 'x');
+        identifier.resize(identifier.size() + padding_bytes);
+        check(identifier.data(), identifier.size(), token_type::identifier);
     }
 
     for (keyword_token kt : keyword_tokens) {

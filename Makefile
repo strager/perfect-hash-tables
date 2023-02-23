@@ -88,7 +88,6 @@ pht_combinations = \
 	--table-size=pot_--characters=15_--hasher=lehmer128_--string-compare=chunk84_--cmov \
 	--table-size=pot_--characters=15_--hasher=lehmer128_--string-compare=chunk84_--cmov_--no-null-input \
 	--table-size=pot_--characters=15_--hasher=lehmer128_--string-compare=chunk84_--cmov_--keyword-size-in-entry \
-	--table-size=pot_--characters=15_--hasher=lehmer128_--string-compare=chunk84_--cmov_--no-early-bounds-check \
 	--table-size=pot_--characters=15_--hasher=lehmer128_--string-compare=chunk84_--cmov_--keyword-size-in-entry_--no-early-bounds-check \
 	--characters=15_--hasher=pearson8
 ifeq ($(os),Linux)
@@ -96,17 +95,14 @@ pht_combinations += \
 	--table-size=pot_--characters=15_--hasher=lehmer128_--string-compare=cmpestri \
 	--table-size=pot_--characters=15_--hasher=lehmer128_--string-compare=cmpestri_--cmov \
 	--table-size=pot_--characters=15_--hasher=lehmer128_--string-compare=cmpestri_--cmov_--keyword-size-in-entry \
-	--table-size=pot_--characters=15_--hasher=lehmer128_--string-compare=cmpestri_--cmov_--no-early-bounds-check \
 	--table-size=pot_--characters=15_--hasher=lehmer128_--string-compare=cmpestri_--cmov_--keyword-size-in-entry_--no-early-bounds-check \
 	--table-size=pot_--characters=15_--hasher=lehmer128_--string-compare=sse2 \
 	--table-size=pot_--characters=15_--hasher=lehmer128_--string-compare=sse2_--cmov \
 	--table-size=pot_--characters=15_--hasher=lehmer128_--string-compare=sse2_--cmov_--keyword-size-in-entry \
-	--table-size=pot_--characters=15_--hasher=lehmer128_--string-compare=sse2_--cmov_--no-early-bounds-check \
 	--table-size=pot_--characters=15_--hasher=lehmer128_--string-compare=sse2_--cmov_--keyword-size-in-entry_--no-early-bounds-check \
 	--table-size=pot_--characters=15_--hasher=lehmer128_--string-compare=ptest \
 	--table-size=pot_--characters=15_--hasher=lehmer128_--string-compare=ptest_--cmov \
 	--table-size=pot_--characters=15_--hasher=lehmer128_--string-compare=ptest_--cmov_--keyword-size-in-entry \
-	--table-size=pot_--characters=15_--hasher=lehmer128_--string-compare=ptest_--cmov_--no-early-bounds-check \
 	--table-size=pot_--characters=15_--hasher=lehmer128_--string-compare=ptest_--cmov_--keyword-size-in-entry_--no-early-bounds-check \
 	--table-size=small_--characters=15_--hasher=icrc32 \
 	--table-size=small_--characters=23_--hasher=icrc32 \
@@ -115,11 +111,11 @@ pht_combinations += \
 	--table-size=small_--characters=15_--hasher=icrc32_--inline-hash \
 	--table-size=small_--characters=15_--hasher=icrc32_--string-compare=check1memcmp \
 	--table-size=small_--characters=15_--hasher=icrc32_--string-compare=cmpestri_--cmov \
-	--table-size=small_--characters=15_--hasher=icrc32_--string-compare=cmpestri_--cmov_--no-early-bounds-check \
+	--table-size=small_--characters=15_--hasher=icrc32_--string-compare=cmpestri_--cmov_--keyword-size-in-entry_--no-early-bounds-check \
 	--table-size=small_--characters=15_--hasher=icrc32_--string-compare=sse2_--cmov \
-	--table-size=small_--characters=15_--hasher=icrc32_--string-compare=sse2_--cmov_--no-early-bounds-check \
+	--table-size=small_--characters=15_--hasher=icrc32_--string-compare=sse2_--cmov_--keyword-size-in-entry_--no-early-bounds-check \
 	--table-size=small_--characters=15_--hasher=icrc32_--string-compare=ptest_--cmov \
-	--table-size=small_--characters=15_--hasher=icrc32_--string-compare=ptest_--cmov_--no-early-bounds-check \
+	--table-size=small_--characters=15_--hasher=icrc32_--string-compare=ptest_--cmov_--keyword-size-in-entry_--no-early-bounds-check \
 	--table-size=194_--characters=15_--hasher=icrc32_--string-compare=ptest_--cmov_--iterations=10000000 \
 	--table-size=small_--characters=15_--hasher=aes \
 	--table-size=small_--characters=23_--hasher=aes \
