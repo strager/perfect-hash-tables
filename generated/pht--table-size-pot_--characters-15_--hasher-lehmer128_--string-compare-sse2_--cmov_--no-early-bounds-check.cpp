@@ -588,7 +588,7 @@ token_type look_up_identifier(const char* identifier, std::size_t size) noexcept
 
         : "cc"   // Clobbered by test.
     );
-    return (token_type)result;
 
+    return (token_type)result;
 }
 }

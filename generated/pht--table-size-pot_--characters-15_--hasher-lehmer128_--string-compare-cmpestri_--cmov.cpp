@@ -592,7 +592,7 @@ token_type look_up_identifier(const char* identifier, std::size_t size) noexcept
         : "cc",   // Clobbered by pcmpestrm.
           "xmm0"  // Clobbered by pcmpestrm.
     );
-    return (token_type)result;
 
+    return (token_type)result;
 }
 }

@@ -605,6 +605,5 @@ token_type look_up_identifier(const char* identifier, std::size_t size) noexcept
     if (entry.keyword[size] != '\0') result = (int)token_type::identifier;  // length check
 
     return (token_type)result;
-
 }
 }

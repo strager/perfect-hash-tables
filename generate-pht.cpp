@@ -652,9 +652,6 @@ token_type look_up_identifier(const char* identifier, std::size_t size) noexcept
     if (entry.keyword[size] != '\0') result = (int)token_type::identifier;  // length check
 )");
                 }
-                std::fprintf(file, "%s", R"(
-    return (token_type)result;
-)");
             } else {
                 std::fprintf(file, "%s", R"(
     std::uint64_t comparison = first_8_comparison | last_4_comparison;
@@ -707,7 +704,6 @@ token_type look_up_identifier(const char* identifier, std::size_t size) noexcept
 
         : "cc"   // Clobbered by test.
     );
-    return (token_type)result;
 )");
             } else {
                 std::fprintf(file, "%s", R"(
@@ -759,7 +755,6 @@ token_type look_up_identifier(const char* identifier, std::size_t size) noexcept
 
         : "cc"   // Clobbered by ptest.
     );
-    return (token_type)result;
 )");
             } else {
                 std::fprintf(file, "%s", R"(
@@ -808,7 +803,6 @@ token_type look_up_identifier(const char* identifier, std::size_t size) noexcept
         : "cc",   // Clobbered by pcmpestrm.
           "xmm0"  // Clobbered by pcmpestrm.
     );
-    return (token_type)result;
 )");
             } else {
                 std::fprintf(file, "%s", R"(
@@ -845,7 +839,6 @@ token_type look_up_identifier(const char* identifier, std::size_t size) noexcept
     if (entry.keyword[size]) {  // length check
         result = (int)token_type::identifier;
     }
-    return (token_type)result;
 )");
             } else {
                 std::fprintf(file, "%s", R"(
@@ -862,10 +855,10 @@ token_type look_up_identifier(const char* identifier, std::size_t size) noexcept
     if (comparison != 0) {
         result = (int)token_type::identifier;
     }
-    return (token_type)result;
 )");
     }
     std::fprintf(file, "%s", R"(
+    return (token_type)result;
 }
 }
 )");

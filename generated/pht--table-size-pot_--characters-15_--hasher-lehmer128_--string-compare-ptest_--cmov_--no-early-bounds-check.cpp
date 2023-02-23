@@ -590,7 +590,7 @@ token_type look_up_identifier(const char* identifier, std::size_t size) noexcept
 
         : "cc"   // Clobbered by ptest.
     );
-    return (token_type)result;
 
+    return (token_type)result;
 }
 }
