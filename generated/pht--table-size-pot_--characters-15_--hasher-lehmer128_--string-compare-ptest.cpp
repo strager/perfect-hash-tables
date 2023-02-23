@@ -566,12 +566,8 @@ token_type look_up_identifier(const char* identifier, std::size_t size) noexcept
     __m128i identifier_unmasked = ::_mm_lddqu_si128((const __m128i*)identifier);
     __m128i compared = ::_mm_xor_si128(entry_unmasked, identifier_unmasked);
 
-    int comparison = ::_mm_test_all_zeros(mask, compared) != 1;
-    if (comparison == 0) {
-        comparison = entry.keyword[size];  // length check
-    }
-
-    if (comparison != 0) {
+    if (::_mm_test_all_zeros(mask, compared) == 0
+        || entry.keyword[size] != '\0') {  // length check
         result = (int)token_type::identifier;
     }
 

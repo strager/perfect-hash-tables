@@ -556,12 +556,10 @@ token_type look_up_identifier(const char* identifier, std::size_t size) noexcept
     switch (table.strategy.string_compare) {
         case string_compare_strategy::check_first_then_memcmp:
             std::fprintf(file, "%s", R"(
-    if (entry.keyword[0] != identifier[0]) {
-        return token_type::identifier;
-    }
-    int comparison = std::memcmp(identifier + 1, entry.keyword + 1, size - 1);
-    if (comparison == 0) {
-        comparison = entry.keyword[size];  // length check
+    if (entry.keyword[0] != identifier[0]
+        || std::memcmp(identifier + 1, entry.keyword + 1, size - 1) != 0
+        || entry.keyword[size] != '\0') {  // length check
+        result = (int)token_type::identifier;
     }
 )");
             break;
@@ -571,20 +569,18 @@ token_type look_up_identifier(const char* identifier, std::size_t size) noexcept
     std::memcpy(&entry_first_two, entry.keyword, 2);
     std::uint16_t identifier_first_two;
     std::memcpy(&identifier_first_two, identifier, 2);
-    if (entry_first_two != identifier_first_two) {
-        return token_type::identifier;
-    }
-    int comparison = std::memcmp(identifier + 2, entry.keyword + 2, size - 2);
-    if (comparison == 0) {
-        comparison = entry.keyword[size];  // length check
+    if (entry_first_two != identifier_first_two
+        || std::memcmp(identifier + 2, entry.keyword + 2, size - 2) != 0
+        || entry.keyword[size] != '\0') {  // length check
+        result = (int)token_type::identifier;
     }
 )");
             break;
         case string_compare_strategy::memcmp:
             std::fprintf(file, "%s", R"(
-    int comparison = std::memcmp(identifier, entry.keyword, size);
-    if (comparison == 0) {
-        comparison = entry.keyword[size];  // length check
+    if (std::memcmp(identifier, entry.keyword, size) != 0
+        || entry.keyword[size] != '\0') {  // length check
+        result = (int)token_type::identifier;
     }
 )");
             break;
@@ -654,15 +650,18 @@ token_type look_up_identifier(const char* identifier, std::size_t size) noexcept
                 }
             } else {
                 std::fprintf(file, "%s", R"(
-    std::uint64_t comparison = first_8_comparison | last_4_comparison;
+    if ((first_8_comparison | last_4_comparison)
 )");
                 if (table.strategy.allow_null_in_inputs) {
                     std::fprintf(file, "%s", R"(
-    if (comparison == 0) {
-        comparison = entry.keyword[size];  // length check
-    }
+        || entry.keyword[size] != '\0'  // length check
 )");
                 }
+                std::fprintf(file, "%s", R"(
+    ) {
+        result = (int)token_type::identifier;
+    }
+)");
             }
             break;
         case string_compare_strategy::sse2:
@@ -707,9 +706,9 @@ token_type look_up_identifier(const char* identifier, std::size_t size) noexcept
 )");
             } else {
                 std::fprintf(file, "%s", R"(
-    int comparison = mask & ~equal_mask;
-    if (comparison == 0) {
-        comparison = entry.keyword[size];  // length check
+    if ((mask & ~equal_mask) != 0
+        || entry.keyword[size] != '\0') {  // length check
+        result = (int)token_type::identifier;
     }
 )");
             }
@@ -758,9 +757,9 @@ token_type look_up_identifier(const char* identifier, std::size_t size) noexcept
 )");
             } else {
                 std::fprintf(file, "%s", R"(
-    int comparison = ::_mm_test_all_zeros(mask, compared) != 1;
-    if (comparison == 0) {
-        comparison = entry.keyword[size];  // length check
+    if (::_mm_test_all_zeros(mask, compared) == 0
+        || entry.keyword[size] != '\0') {  // length check
+        result = (int)token_type::identifier;
     }
 )");
             }
@@ -806,14 +805,14 @@ token_type look_up_identifier(const char* identifier, std::size_t size) noexcept
 )");
             } else {
                 std::fprintf(file, "%s", R"(
-    int comparison = _mm_cmpestrc(
+    if (_mm_cmpestrc(
         ::_mm_lddqu_si128((const __m128i*)identifier),
         size,
         ::_mm_lddqu_si128((const __m128i*)entry.keyword),
         size,
-        _SIDD_UBYTE_OPS | _SIDD_CMP_EQUAL_EACH | _SIDD_NEGATIVE_POLARITY);
-    if (comparison == 0) {
-        comparison = entry.keyword[size];  // length check
+        _SIDD_UBYTE_OPS | _SIDD_CMP_EQUAL_EACH | _SIDD_NEGATIVE_POLARITY)
+        || entry.keyword[size] != '\0') {  // length check
+        result = (int)token_type::identifier;
     }
 )");
             }
@@ -842,20 +841,13 @@ token_type look_up_identifier(const char* identifier, std::size_t size) noexcept
 )");
             } else {
                 std::fprintf(file, "%s", R"(
-    int comparison = vgetq_lane_s64(compared, 0) | vgetq_lane_s64(compared, 1);
-    if (comparison == 0) {
-        comparison = entry.keyword[size];  // length check
+    if ((vgetq_lane_s64(compared, 0) | vgetq_lane_s64(compared, 1)) != 0
+        || entry.keyword[size] != '\0') {  // length check
+        result = (int)token_type::identifier;
     }
 )");
             }
             break;
-    }
-    if (!table.strategy.cmov) {
-        std::fprintf(file, "%s", R"(
-    if (comparison != 0) {
-        result = (int)token_type::identifier;
-    }
-)");
     }
     std::fprintf(file, "%s", R"(
     return (token_type)result;

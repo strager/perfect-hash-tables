@@ -565,12 +565,8 @@ token_type look_up_identifier(const char* identifier, std::size_t size) noexcept
     std::uint32_t equal_mask = ::_mm_movemask_epi8(::_mm_cmpeq_epi8(entry_unmasked, identifier_unmasked));
     std::uint32_t not_equal_mask = ~equal_mask;
 
-    int comparison = mask & ~equal_mask;
-    if (comparison == 0) {
-        comparison = entry.keyword[size];  // length check
-    }
-
-    if (comparison != 0) {
+    if ((mask & ~equal_mask) != 0
+        || entry.keyword[size] != '\0') {  // length check
         result = (int)token_type::identifier;
     }
 

@@ -561,15 +561,9 @@ token_type look_up_identifier(const char* identifier, std::size_t size) noexcept
     std::memcpy(&entry_first_two, entry.keyword, 2);
     std::uint16_t identifier_first_two;
     std::memcpy(&identifier_first_two, identifier, 2);
-    if (entry_first_two != identifier_first_two) {
-        return token_type::identifier;
-    }
-    int comparison = std::memcmp(identifier + 2, entry.keyword + 2, size - 2);
-    if (comparison == 0) {
-        comparison = entry.keyword[size];  // length check
-    }
-
-    if (comparison != 0) {
+    if (entry_first_two != identifier_first_two
+        || std::memcmp(identifier + 2, entry.keyword + 2, size - 2) != 0
+        || entry.keyword[size] != '\0') {  // length check
         result = (int)token_type::identifier;
     }
 

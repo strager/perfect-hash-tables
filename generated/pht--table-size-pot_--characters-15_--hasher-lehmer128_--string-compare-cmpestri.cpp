@@ -557,17 +557,13 @@ token_type look_up_identifier(const char* identifier, std::size_t size) noexcept
     const table_entry& entry = table[index];
     int result = (int)entry.type;
 
-    int comparison = _mm_cmpestrc(
+    if (_mm_cmpestrc(
         ::_mm_lddqu_si128((const __m128i*)identifier),
         size,
         ::_mm_lddqu_si128((const __m128i*)entry.keyword),
         size,
-        _SIDD_UBYTE_OPS | _SIDD_CMP_EQUAL_EACH | _SIDD_NEGATIVE_POLARITY);
-    if (comparison == 0) {
-        comparison = entry.keyword[size];  // length check
-    }
-
-    if (comparison != 0) {
+        _SIDD_UBYTE_OPS | _SIDD_CMP_EQUAL_EACH | _SIDD_NEGATIVE_POLARITY)
+        || entry.keyword[size] != '\0') {  // length check
         result = (int)token_type::identifier;
     }
 

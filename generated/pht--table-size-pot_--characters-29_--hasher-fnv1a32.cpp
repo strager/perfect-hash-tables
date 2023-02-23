@@ -1069,12 +1069,8 @@ token_type look_up_identifier(const char* identifier, std::size_t size) noexcept
     const table_entry& entry = table[index];
     int result = (int)entry.type;
 
-    int comparison = std::memcmp(identifier, entry.keyword, size);
-    if (comparison == 0) {
-        comparison = entry.keyword[size];  // length check
-    }
-
-    if (comparison != 0) {
+    if (std::memcmp(identifier, entry.keyword, size) != 0
+        || entry.keyword[size] != '\0') {  // length check
         result = (int)token_type::identifier;
     }
 

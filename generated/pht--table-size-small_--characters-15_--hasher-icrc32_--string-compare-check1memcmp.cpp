@@ -307,15 +307,9 @@ token_type look_up_identifier(const char* identifier, std::size_t size) noexcept
     const table_entry& entry = table[index];
     int result = (int)entry.type;
 
-    if (entry.keyword[0] != identifier[0]) {
-        return token_type::identifier;
-    }
-    int comparison = std::memcmp(identifier + 1, entry.keyword + 1, size - 1);
-    if (comparison == 0) {
-        comparison = entry.keyword[size];  // length check
-    }
-
-    if (comparison != 0) {
+    if (entry.keyword[0] != identifier[0]
+        || std::memcmp(identifier + 1, entry.keyword + 1, size - 1) != 0
+        || entry.keyword[size] != '\0') {  // length check
         result = (int)token_type::identifier;
     }
 
