@@ -307,6 +307,11 @@ token_type look_up_identifier(const char* identifier, std::size_t size) noexcept
     std::uint32_t index = hash_to_index(h, table_size, sizeof(table_entry), hash_to_index_strategy::modulo);
 
     const table_entry& entry = table[index];
+
+    auto length_ok = [&]() -> bool {
+        return entry.keyword[size] == '\0';
+    };
+
     int result = (int)entry.type;
 
     if (h != entry.hash) {
@@ -314,7 +319,7 @@ token_type look_up_identifier(const char* identifier, std::size_t size) noexcept
     }
 
     if (std::memcmp(identifier, entry.keyword, size) != 0
-        || entry.keyword[size] != '\0') {  // length check
+        || !length_ok()) {
         result = (int)token_type::identifier;
     }
 

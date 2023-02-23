@@ -555,6 +555,11 @@ token_type look_up_identifier(const char* identifier, std::size_t size) noexcept
     std::uint32_t index = hash_to_index(h, table_size, sizeof(table_entry), hash_to_index_strategy::modulo);
 
     const table_entry& entry = table[index];
+
+    auto length_ok = [&]() -> bool {
+        return entry.keyword[size] == '\0';
+    };
+
     int result = (int)entry.type;
 
     __m128i entry_unmasked = ::_mm_lddqu_si128((const __m128i*)entry.keyword);
@@ -566,7 +571,7 @@ token_type look_up_identifier(const char* identifier, std::size_t size) noexcept
     std::uint32_t not_equal_mask = ~equal_mask;
 
     if ((mask & ~equal_mask) != 0
-        || entry.keyword[size] != '\0') {  // length check
+        || !length_ok()) {
         result = (int)token_type::identifier;
     }
 

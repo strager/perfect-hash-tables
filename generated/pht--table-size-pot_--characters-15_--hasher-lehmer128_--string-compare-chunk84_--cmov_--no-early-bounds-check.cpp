@@ -551,6 +551,11 @@ token_type look_up_identifier(const char* identifier, std::size_t size) noexcept
     std::uint32_t index = hash_to_index(h, table_size, sizeof(table_entry), hash_to_index_strategy::modulo);
 
     const table_entry& entry = table[index];
+
+    auto length_ok = [&]() -> bool {
+        return entry.keyword[size] == '\0';
+    };
+
     int result = (int)entry.type;
 
     std::uint64_t identifier_first_8;
@@ -598,7 +603,7 @@ token_type look_up_identifier(const char* identifier, std::size_t size) noexcept
         : "cc"   // Clobbered by or.
     );
 
-    if (entry.keyword[size] != '\0') result = (int)token_type::identifier;  // length check
+    if (!length_ok()) result = (int)token_type::identifier;
 
     return (token_type)result;
 }

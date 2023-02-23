@@ -544,6 +544,11 @@ token_type look_up_identifier(const char* identifier, std::size_t size) noexcept
 )", hasher_class, hash_to_index);
     std::fprintf(file, "%s", R"(
     const table_entry& entry = table[index];
+
+    auto length_ok = [&]() -> bool {
+        return entry.keyword[size] == '\0';
+    };
+
     int result = (int)entry.type;
 )");
     if (table.strategy.inline_hash) {
@@ -558,7 +563,7 @@ token_type look_up_identifier(const char* identifier, std::size_t size) noexcept
             std::fprintf(file, "%s", R"(
     if (entry.keyword[0] != identifier[0]
         || std::memcmp(identifier + 1, entry.keyword + 1, size - 1) != 0
-        || entry.keyword[size] != '\0') {  // length check
+        || !length_ok()) {
         result = (int)token_type::identifier;
     }
 )");
@@ -571,7 +576,7 @@ token_type look_up_identifier(const char* identifier, std::size_t size) noexcept
     std::memcpy(&identifier_first_two, identifier, 2);
     if (entry_first_two != identifier_first_two
         || std::memcmp(identifier + 2, entry.keyword + 2, size - 2) != 0
-        || entry.keyword[size] != '\0') {  // length check
+        || !length_ok()) {
         result = (int)token_type::identifier;
     }
 )");
@@ -579,7 +584,7 @@ token_type look_up_identifier(const char* identifier, std::size_t size) noexcept
         case string_compare_strategy::memcmp:
             std::fprintf(file, "%s", R"(
     if (std::memcmp(identifier, entry.keyword, size) != 0
-        || entry.keyword[size] != '\0') {  // length check
+        || !length_ok()) {
         result = (int)token_type::identifier;
     }
 )");
@@ -645,7 +650,7 @@ token_type look_up_identifier(const char* identifier, std::size_t size) noexcept
 )");
                 if (table.strategy.allow_null_in_inputs) {
                     std::fprintf(file, "%s", R"(
-    if (entry.keyword[size] != '\0') result = (int)token_type::identifier;  // length check
+    if (!length_ok()) result = (int)token_type::identifier;
 )");
                 }
             } else {
@@ -654,7 +659,7 @@ token_type look_up_identifier(const char* identifier, std::size_t size) noexcept
 )");
                 if (table.strategy.allow_null_in_inputs) {
                     std::fprintf(file, "%s", R"(
-        || entry.keyword[size] != '\0'  // length check
+        || !length_ok()
 )");
                 }
                 std::fprintf(file, "%s", R"(
@@ -707,7 +712,7 @@ token_type look_up_identifier(const char* identifier, std::size_t size) noexcept
             } else {
                 std::fprintf(file, "%s", R"(
     if ((mask & ~equal_mask) != 0
-        || entry.keyword[size] != '\0') {  // length check
+        || !length_ok()) {
         result = (int)token_type::identifier;
     }
 )");
@@ -758,7 +763,7 @@ token_type look_up_identifier(const char* identifier, std::size_t size) noexcept
             } else {
                 std::fprintf(file, "%s", R"(
     if (::_mm_test_all_zeros(mask, compared) == 0
-        || entry.keyword[size] != '\0') {  // length check
+        || !length_ok()) {
         result = (int)token_type::identifier;
     }
 )");
@@ -811,7 +816,7 @@ token_type look_up_identifier(const char* identifier, std::size_t size) noexcept
         ::_mm_lddqu_si128((const __m128i*)entry.keyword),
         size,
         _SIDD_UBYTE_OPS | _SIDD_CMP_EQUAL_EACH | _SIDD_NEGATIVE_POLARITY)
-        || entry.keyword[size] != '\0') {  // length check
+        || !length_ok()) {
         result = (int)token_type::identifier;
     }
 )");
@@ -835,14 +840,14 @@ token_type look_up_identifier(const char* identifier, std::size_t size) noexcept
     if (vgetq_lane_s64(compared, 0) | vgetq_lane_s64(compared, 1)) {
         result = (int)token_type::identifier;
     }
-    if (entry.keyword[size]) {  // length check
+    if (!length_ok()) {
         result = (int)token_type::identifier;
     }
 )");
             } else {
                 std::fprintf(file, "%s", R"(
     if ((vgetq_lane_s64(compared, 0) | vgetq_lane_s64(compared, 1)) != 0
-        || entry.keyword[size] != '\0') {  // length check
+        || !length_ok()) {
         result = (int)token_type::identifier;
     }
 )");
