@@ -554,6 +554,7 @@ token_type look_up_identifier(const char* identifier, std::size_t size) noexcept
     std::uint32_t index = hash_to_index(h, table_size, sizeof(table_entry), hash_to_index_strategy::modulo);
 
     const table_entry& entry = table[index];
+    const char* entry_keyword = table[index].keyword;
 
     auto length_ok = [&]() -> bool {
 
@@ -583,7 +584,7 @@ token_type look_up_identifier(const char* identifier, std::size_t size) noexcept
 #endif
 
 
-    __m128i entry_unmasked = ::_mm_lddqu_si128((const __m128i*)entry.keyword);
+    __m128i entry_unmasked = ::_mm_lddqu_si128((const __m128i*)entry_keyword);
     __m128i identifier_unmasked = ::_mm_lddqu_si128((const __m128i*)identifier);
     // Calculating the mask this way seems to be much much faster than '(1 << size) - 1'.
     std::uint32_t inv_mask = ~(std::uint32_t)0 << size;

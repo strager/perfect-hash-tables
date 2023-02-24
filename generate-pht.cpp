@@ -560,6 +560,7 @@ token_type look_up_identifier(const char* identifier, std::size_t size) noexcept
 )", hasher_class, hash_to_index);
     std::fprintf(file, "%s", R"(
     const table_entry& entry = table[index];
+    const char* entry_keyword = table[index].keyword;
 
     auto length_ok = [&]() -> bool {
 )");
@@ -599,14 +600,14 @@ token_type look_up_identifier(const char* identifier, std::size_t size) noexcept
         std::fprintf(file, "%s", R"(
         __asm__(
             // If what should be the null terminator is not null, then
-            // (size != strlen(entry.keyword)), so set result to
+            // (size != strlen(entry_keyword)), so set result to
             // token_type::identifier.
             "cmpb $0, %[entry_keyword_at_size]\n"
             "cmovne %[token_type_identifier], %[result]\n"
 
             : [result]"+r"(result)
 
-            : [entry_keyword_at_size]"m"(entry.keyword[size]),
+            : [entry_keyword_at_size]"m"(entry_keyword[size]),
               [token_type_identifier]"r"((int)token_type::identifier)
 
             : "cc"   // Clobbered by cmp.
@@ -628,8 +629,8 @@ token_type look_up_identifier(const char* identifier, std::size_t size) noexcept
     switch (table.strategy.string_compare) {
         case string_compare_strategy::check_first_then_memcmp:
             std::fprintf(file, "%s", R"(
-    if (entry.keyword[0] != identifier[0]
-        || std::memcmp(identifier + 1, entry.keyword + 1, size - 1) != 0
+    if (entry_keyword[0] != identifier[0]
+        || std::memcmp(identifier + 1, entry_keyword + 1, size - 1) != 0
         || !length_ok()) {
         return token_type::identifier;
     }
@@ -638,11 +639,11 @@ token_type look_up_identifier(const char* identifier, std::size_t size) noexcept
         case string_compare_strategy::check_two_then_memcmp:
             std::fprintf(file, "%s", R"(
     std::uint16_t entry_first_two;
-    std::memcpy(&entry_first_two, entry.keyword, 2);
+    std::memcpy(&entry_first_two, entry_keyword, 2);
     std::uint16_t identifier_first_two;
     std::memcpy(&identifier_first_two, identifier, 2);
     if (entry_first_two != identifier_first_two
-        || std::memcmp(identifier + 2, entry.keyword + 2, size - 2) != 0
+        || std::memcmp(identifier + 2, entry_keyword + 2, size - 2) != 0
         || !length_ok()) {
         return token_type::identifier;
     }
@@ -650,7 +651,7 @@ token_type look_up_identifier(const char* identifier, std::size_t size) noexcept
             break;
         case string_compare_strategy::memcmp:
             std::fprintf(file, "%s", R"(
-    if (std::memcmp(identifier, entry.keyword, size) != 0
+    if (std::memcmp(identifier, entry_keyword, size) != 0
         || !length_ok()) {
         return token_type::identifier;
     }
@@ -664,9 +665,9 @@ token_type look_up_identifier(const char* identifier, std::size_t size) noexcept
     std::memcpy(&identifier_last_4, identifier + 8, 4);
 
     std::uint64_t entry_first_8;
-    std::memcpy(&entry_first_8, entry.keyword, 8);
+    std::memcpy(&entry_first_8, entry_keyword, 8);
     std::uint32_t entry_last_4;
-    std::memcpy(&entry_last_4, entry.keyword + 8, 4);
+    std::memcpy(&entry_last_4, entry_keyword + 8, 4);
 
 #if 0
     // FIXME(strager): GCC emits jumps for this code. Clang emits cmov, which is
@@ -738,7 +739,7 @@ token_type look_up_identifier(const char* identifier, std::size_t size) noexcept
             break;
         case string_compare_strategy::sse2:
             std::fprintf(file, "%s", R"(
-    __m128i entry_unmasked = ::_mm_lddqu_si128((const __m128i*)entry.keyword);
+    __m128i entry_unmasked = ::_mm_lddqu_si128((const __m128i*)entry_keyword);
     __m128i identifier_unmasked = ::_mm_lddqu_si128((const __m128i*)identifier);
     // Calculating the mask this way seems to be much much faster than '(1 << size) - 1'.
     std::uint32_t inv_mask = ~(std::uint32_t)0 << size;
@@ -779,7 +780,7 @@ token_type look_up_identifier(const char* identifier, std::size_t size) noexcept
         ::_mm_setr_epi8(
             0, 1, 2, 3, 4, 5, 6, 7,
             8, 9, 10, 11, 12, 13, 14, 15));
-    __m128i entry_unmasked = ::_mm_lddqu_si128((const __m128i*)entry.keyword);
+    __m128i entry_unmasked = ::_mm_lddqu_si128((const __m128i*)entry_keyword);
     __m128i identifier_unmasked = ::_mm_lddqu_si128((const __m128i*)identifier);
     __m128i compared = ::_mm_xor_si128(entry_unmasked, identifier_unmasked);
 )");
@@ -788,7 +789,7 @@ token_type look_up_identifier(const char* identifier, std::size_t size) noexcept
     check_length_cmov();
 
     __asm__(
-        // Compare the entry.keyword and identifier strings.
+        // Compare the entry_keyword and identifier strings.
         "ptest %[compared], %[mask]\n"
         "cmovne %[token_type_identifier], %[result]\n"
 
@@ -816,7 +817,7 @@ token_type look_up_identifier(const char* identifier, std::size_t size) noexcept
     check_length_cmov();
 
     __asm__(
-        // Compare the entry.keyword and identifier strings.
+        // Compare the entry_keyword and identifier strings.
         // %eax: size of %[entry_keyword].
         // %edx: size of %[identifier].
         "pcmpestrm %[cmpestrm_flags], %[entry_keyword], %[identifier]\n"
@@ -826,7 +827,7 @@ token_type look_up_identifier(const char* identifier, std::size_t size) noexcept
         : [result]"+r"(result)
 
         : [identifier]"x"(::_mm_lddqu_si128((const __m128i*)identifier)),
-          [entry_keyword]"x"(::_mm_lddqu_si128((const __m128i*)entry.keyword)),
+          [entry_keyword]"x"(::_mm_lddqu_si128((const __m128i*)entry_keyword)),
           [token_type_identifier]"r"((int)token_type::identifier),
           [cmpestrm_flags]"i"(_SIDD_UBYTE_OPS | _SIDD_CMP_EQUAL_EACH | _SIDD_NEGATIVE_POLARITY),
           "a"(size), // %eax: size of %[entry_keyword].
@@ -841,7 +842,7 @@ token_type look_up_identifier(const char* identifier, std::size_t size) noexcept
     if (_mm_cmpestrc(
         ::_mm_lddqu_si128((const __m128i*)identifier),
         size,
-        ::_mm_lddqu_si128((const __m128i*)entry.keyword),
+        ::_mm_lddqu_si128((const __m128i*)entry_keyword),
         size,
         _SIDD_UBYTE_OPS | _SIDD_CMP_EQUAL_EACH | _SIDD_NEGATIVE_POLARITY)
         || !length_ok()) {
@@ -858,7 +859,7 @@ token_type look_up_identifier(const char* identifier, std::size_t size) noexcept
     };
     ::uint8x16_t mask = ::vcgtq_u8(::vdupq_n_u8(size), zero_to_fifteen);
     ::uint8x16_t entry_unmasked;
-    std::memcpy(&entry_unmasked, entry.keyword, 16);
+    std::memcpy(&entry_unmasked, entry_keyword, 16);
     ::uint8x16_t identifier_unmasked;
     std::memcpy(&identifier_unmasked, identifier, 16);
     ::uint8x16_t compared = ::vandq_u8(::veorq_u8(entry_unmasked, identifier_unmasked), mask);

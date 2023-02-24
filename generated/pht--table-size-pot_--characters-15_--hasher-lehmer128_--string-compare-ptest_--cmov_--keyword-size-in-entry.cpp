@@ -558,6 +558,7 @@ token_type look_up_identifier(const char* identifier, std::size_t size) noexcept
     std::uint32_t index = hash_to_index(h, table_size, sizeof(table_entry), hash_to_index_strategy::modulo);
 
     const table_entry& entry = table[index];
+    const char* entry_keyword = table[index].keyword;
 
     auto length_ok = [&]() -> bool {
 
@@ -592,14 +593,14 @@ token_type look_up_identifier(const char* identifier, std::size_t size) noexcept
         ::_mm_setr_epi8(
             0, 1, 2, 3, 4, 5, 6, 7,
             8, 9, 10, 11, 12, 13, 14, 15));
-    __m128i entry_unmasked = ::_mm_lddqu_si128((const __m128i*)entry.keyword);
+    __m128i entry_unmasked = ::_mm_lddqu_si128((const __m128i*)entry_keyword);
     __m128i identifier_unmasked = ::_mm_lddqu_si128((const __m128i*)identifier);
     __m128i compared = ::_mm_xor_si128(entry_unmasked, identifier_unmasked);
 
     check_length_cmov();
 
     __asm__(
-        // Compare the entry.keyword and identifier strings.
+        // Compare the entry_keyword and identifier strings.
         "ptest %[compared], %[mask]\n"
         "cmovne %[token_type_identifier], %[result]\n"
 

@@ -556,6 +556,7 @@ token_type look_up_identifier(const char* identifier, std::size_t size) noexcept
     std::uint32_t index = hash_to_index(h, table_size, sizeof(table_entry), hash_to_index_strategy::modulo);
 
     const table_entry& entry = table[index];
+    const char* entry_keyword = table[index].keyword;
 
     auto length_ok = [&]() -> bool {
 
@@ -570,14 +571,14 @@ token_type look_up_identifier(const char* identifier, std::size_t size) noexcept
 
         __asm__(
             // If what should be the null terminator is not null, then
-            // (size != strlen(entry.keyword)), so set result to
+            // (size != strlen(entry_keyword)), so set result to
             // token_type::identifier.
             "cmpb $0, %[entry_keyword_at_size]\n"
             "cmovne %[token_type_identifier], %[result]\n"
 
             : [result]"+r"(result)
 
-            : [entry_keyword_at_size]"m"(entry.keyword[size]),
+            : [entry_keyword_at_size]"m"(entry_keyword[size]),
               [token_type_identifier]"r"((int)token_type::identifier)
 
             : "cc"   // Clobbered by cmp.
@@ -593,9 +594,9 @@ token_type look_up_identifier(const char* identifier, std::size_t size) noexcept
     std::memcpy(&identifier_last_4, identifier + 8, 4);
 
     std::uint64_t entry_first_8;
-    std::memcpy(&entry_first_8, entry.keyword, 8);
+    std::memcpy(&entry_first_8, entry_keyword, 8);
     std::uint32_t entry_last_4;
-    std::memcpy(&entry_last_4, entry.keyword + 8, 4);
+    std::memcpy(&entry_last_4, entry_keyword + 8, 4);
 
 #if 0
     // FIXME(strager): GCC emits jumps for this code. Clang emits cmov, which is

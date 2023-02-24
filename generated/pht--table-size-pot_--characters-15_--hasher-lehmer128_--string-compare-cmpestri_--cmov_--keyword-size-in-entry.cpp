@@ -558,6 +558,7 @@ token_type look_up_identifier(const char* identifier, std::size_t size) noexcept
     std::uint32_t index = hash_to_index(h, table_size, sizeof(table_entry), hash_to_index_strategy::modulo);
 
     const table_entry& entry = table[index];
+    const char* entry_keyword = table[index].keyword;
 
     auto length_ok = [&]() -> bool {
 
@@ -590,7 +591,7 @@ token_type look_up_identifier(const char* identifier, std::size_t size) noexcept
     check_length_cmov();
 
     __asm__(
-        // Compare the entry.keyword and identifier strings.
+        // Compare the entry_keyword and identifier strings.
         // %eax: size of %[entry_keyword].
         // %edx: size of %[identifier].
         "pcmpestrm %[cmpestrm_flags], %[entry_keyword], %[identifier]\n"
@@ -600,7 +601,7 @@ token_type look_up_identifier(const char* identifier, std::size_t size) noexcept
         : [result]"+r"(result)
 
         : [identifier]"x"(::_mm_lddqu_si128((const __m128i*)identifier)),
-          [entry_keyword]"x"(::_mm_lddqu_si128((const __m128i*)entry.keyword)),
+          [entry_keyword]"x"(::_mm_lddqu_si128((const __m128i*)entry_keyword)),
           [token_type_identifier]"r"((int)token_type::identifier),
           [cmpestrm_flags]"i"(_SIDD_UBYTE_OPS | _SIDD_CMP_EQUAL_EACH | _SIDD_NEGATIVE_POLARITY),
           "a"(size), // %eax: size of %[entry_keyword].
