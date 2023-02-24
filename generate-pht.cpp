@@ -481,7 +481,7 @@ constexpr table_entry table[table_size] = {
             }
             std::fprintf(file, "\"\", ");
             if (table.strategy.keyword_size_in_entry) {
-                std::fprintf(file, "%zu, ", entry.keyword.size());
+                std::fprintf(file, "0, ");
             }
             std::fprintf(file, "token_type::identifier},\n");
         } else {
