@@ -63,6 +63,7 @@ struct table_strategy {
     bool cmov;
     bool allow_null_in_inputs;
     bool early_bounds_check;
+    bool string_table;
 };
 
 struct keyword_statistics {
@@ -446,9 +447,15 @@ struct table_entry {
 )");
     }
     bool need_null_terminator = !table.strategy.keyword_size_in_entry;
-    std::fprintf(file, R"(
+    if (table.strategy.string_table) {
+        std::fprintf(file, "%s", R"(
+    std::uint16_t keyword_index;  // Index into string_table.
+)");
+    } else {
+        std::fprintf(file, R"(
     const char keyword[max_keyword_size + %d];
 )", need_null_terminator ? 1 : 0);
+    }
     if (table.strategy.keyword_size_in_entry) {
         std::fprintf(file, "%s", R"(
     std::uint8_t keyword_length;
@@ -466,6 +473,28 @@ struct table_entry {
         std::fprintf(file, "static_assert(sizeof(table_entry) == %u);\n", table.entry_size);
     }
 
+    std::string string_table;
+    if (table.strategy.string_table) {
+        std::vector<keyword_token> sorted_keyword_tokens(std::begin(keyword_tokens), std::end(keyword_tokens));
+        // Reversing lets us merge common prefixes, like for "as", "assert", and
+        // "asserts".
+        std::reverse(sorted_keyword_tokens.begin(), sorted_keyword_tokens.end());
+        for (keyword_token kt : sorted_keyword_tokens) {
+            if (string_table.find(kt.keyword) == string_table.npos) {
+                string_table.append(kt.keyword);
+            }
+        }
+        std::fprintf(file, "%s", R"(
+constexpr char string_table[] = {
+)");
+        for (char c : string_table) {
+            std::fprintf(file, "'%c',", c);
+        }
+        std::fprintf(file, "%s", R"(
+};
+)");
+    }
+
     std::fprintf(file, R"(
 constexpr table_entry table[table_size] = {
 )");
@@ -479,7 +508,11 @@ constexpr table_entry table[table_size] = {
             if (table.strategy.inline_hash) {
                 std::fprintf(file, "0U, ");
             }
-            std::fprintf(file, "\"\", ");
+            if (table.strategy.string_table) {
+                std::fprintf(file, "0, ");
+            } else {
+                std::fprintf(file, "\"\", ");
+            }
             if (table.strategy.keyword_size_in_entry) {
                 std::fprintf(file, "0, ");
             }
@@ -489,30 +522,37 @@ constexpr table_entry table[table_size] = {
                 std::fprintf(file, "%luU, ", (unsigned long)entry.hash);
             }
 
-            if (table.strategy.allow_null_in_inputs) {
-                // Pad with non-zero bytes so our length checks work properly.
-                std::memset(keyword_buffer.data(), '_', keyword_buffer_size);
-                std::memcpy(keyword_buffer.data(), entry.keyword.data(), entry.keyword.size());
-                if (need_null_terminator) {
-                    keyword_buffer[entry.keyword.size()] = '\0';
-                }
+            if (table.strategy.string_table) {
+                auto index = string_table.find(entry.keyword);
+                assert(index != string_table.npos);
+                std::fprintf(file, "%zu, ", index);
             } else {
-                // Pad with zero bytes.
-                std::memset(keyword_buffer.data(), '\0', keyword_buffer_size);
-                std::memcpy(keyword_buffer.data(), entry.keyword.data(), entry.keyword.size());
+                if (table.strategy.allow_null_in_inputs) {
+                    // Pad with non-zero bytes so our length checks work properly.
+                    std::memset(keyword_buffer.data(), '_', keyword_buffer_size);
+                    std::memcpy(keyword_buffer.data(), entry.keyword.data(), entry.keyword.size());
+                    if (need_null_terminator) {
+                        keyword_buffer[entry.keyword.size()] = '\0';
+                    }
+                } else {
+                    // Pad with zero bytes.
+                    std::memset(keyword_buffer.data(), '\0', keyword_buffer_size);
+                    std::memcpy(keyword_buffer.data(), entry.keyword.data(), entry.keyword.size());
+                }
+
+                // Write the string character-by-character to avoid C++ adding a
+                // null terminator for us.
+                std::fprintf(file, "{");
+                for (char c : keyword_buffer) {
+                    if (c == '\0') {
+                        std::fprintf(file, "0,");
+                    } else {
+                        std::fprintf(file, "'%c',", c);
+                    }
+                }
+                std::fprintf(file, "}, ");
             }
 
-            // Write the string character-by-character to avoid C++ adding a
-            // null terminator for us.
-            std::fprintf(file, "{");
-            for (char c : keyword_buffer) {
-                if (c == '\0') {
-                    std::fprintf(file, "0,");
-                } else {
-                    std::fprintf(file, "'%c',", c);
-                }
-            }
-            std::fprintf(file, "}, ");
             if (table.strategy.keyword_size_in_entry) {
                 std::fprintf(file, "%zu, ", entry.keyword.size());
             }
@@ -560,8 +600,18 @@ token_type look_up_identifier(const char* identifier, std::size_t size) noexcept
 )", hasher_class, hash_to_index);
     std::fprintf(file, "%s", R"(
     const table_entry& entry = table[index];
+)");
+    if (table.strategy.string_table) {
+        std::fprintf(file, "%s", R"(
+    const char* entry_keyword = &string_table[table[index].keyword_index];
+)");
+    } else {
+        std::fprintf(file, "%s", R"(
     const char* entry_keyword = table[index].keyword;
+)");
+    }
 
+    std::fprintf(file, "%s", R"(
     auto length_ok = [&]() -> bool {
 )");
     if (table.strategy.keyword_size_in_entry) {
@@ -570,7 +620,7 @@ token_type look_up_identifier(const char* identifier, std::size_t size) noexcept
 )");
     } else {
         std::fprintf(file, "%s", R"(
-        return entry.keyword[size] == '\0';
+        return entry_keyword[size] == '\0';
 )");
     }
     std::fprintf(file, "%s", R"(
@@ -926,6 +976,7 @@ void go(int argc, char** argv) {
         {"no-early-bounds-check", no_argument,       0, 'b' },
         {"no-null-input",         no_argument,       0, 'N' },
         {"shiftless-index",       no_argument,       0, 'l' },
+        {"string-table",          no_argument,       0, 'T' },
         {nullptr,                 0,                 0, 0   }
     };
 
@@ -935,6 +986,7 @@ void go(int argc, char** argv) {
     bool cmov = false;
     bool allow_null_in_inputs = true;
     bool early_bounds_check = true;
+    bool string_table = false;
     hash_to_index_strategy hash_to_index = hash_to_index_strategy::modulo;
     string_compare_strategy string_compare = string_compare_strategy::memcmp;
     std::optional<table_size_strategy> size_strategy;
@@ -1013,6 +1065,10 @@ void go(int argc, char** argv) {
 
             case 'N':
                 allow_null_in_inputs = false;
+                break;
+
+            case 'T':
+                string_table = true;
                 break;
 
             case 's':
@@ -1101,6 +1157,7 @@ done_parsing:
         .cmov = cmov,
         .allow_null_in_inputs = allow_null_in_inputs,
         .early_bounds_check = early_bounds_check,
+        .string_table = string_table,
     };
 
     keyword_statistics stats = make_stats();

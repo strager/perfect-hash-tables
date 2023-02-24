@@ -290,11 +290,12 @@ token_type look_up_identifier(const char* identifier, std::size_t size) noexcept
     std::uint32_t index = hash_to_index(h, table_size, sizeof(table_entry), hash_to_index_strategy::modulo);
 
     const table_entry& entry = table[index];
+
     const char* entry_keyword = table[index].keyword;
 
     auto length_ok = [&]() -> bool {
 
-        return entry.keyword[size] == '\0';
+        return entry_keyword[size] == '\0';
 
     };
 

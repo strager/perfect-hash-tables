@@ -104,6 +104,7 @@ pht_combinations += \
 	--table-size=pot_--characters=15_--hasher=lehmer128_--string-compare=ptest_--cmov \
 	--table-size=pot_--characters=15_--hasher=lehmer128_--string-compare=ptest_--cmov_--keyword-size-in-entry \
 	--table-size=pot_--characters=15_--hasher=lehmer128_--string-compare=ptest_--cmov_--keyword-size-in-entry_--no-early-bounds-check \
+	--table-size=pot_--characters=15_--hasher=lehmer128_--string-compare=ptest_--cmov_--keyword-size-in-entry_--no-early-bounds-check_--string-table \
 	--table-size=small_--characters=15_--hasher=icrc32 \
 	--table-size=small_--characters=23_--hasher=icrc32 \
 	--table-size=small_--characters=27_--hasher=icrc32 \
